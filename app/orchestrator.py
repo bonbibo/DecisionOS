@@ -1,0 +1,199 @@
+"""Turn orchestration (draft).
+
+Wires the subagent flow described in app/prompts/README.md for one incoming
+message:
+
+    Analist(JSON) -> state update
+    -> (Stratejist, only at case open or after a REJECT verdict)
+    -> Yazıcı(draft JSON) <-> Kritik(verdict)
+         APPROVE  -> return the draft for the human-in-the-loop send queue
+         REVISE   -> back to Yazıcı with a revision_note (max MAX_REVISIONS)
+         REJECT   -> re-run Stratejist (max MAX_REJECT_REPLANS), then retry
+         ESCALATE -> stop immediately, hand off to a human
+
+A bad/unparseable subagent response already escalates inside
+app.subagents.call_subagent_json (one retry, then SubagentEscalated); this
+module handles the higher-level APPROVE/REVISE/REJECT/ESCALATE branching on
+top of that.
+"""
+
+from dataclasses import dataclass
+
+from app.engine import InvalidTransition, NegotiationEngine, Tactic
+from app.models import Case, StateEnum
+from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, Verdict, call_subagent_json
+
+MAX_REVISIONS = 2
+MAX_REJECT_REPLANS = 1
+
+
+@dataclass
+class TurnResult:
+    status: str  # "approved" | "escalated"
+    draft: dict | None = None
+    analysis: dict | None = None
+    plan: dict | None = None
+    escalation_reason: str | None = None
+
+
+def _apply_recommended_state(engine: NegotiationEngine, recommended_state: str) -> None:
+    target = StateEnum.close if recommended_state == "walk" else StateEnum(recommended_state)
+    if target is engine.case.state:
+        return
+    engine.transition(target)
+
+
+def _select_tactic(plan: dict, tactics: list[Tactic]) -> Tactic | None:
+    candidate_ids = [*plan.get("primary_tactics", []), *plan.get("fallback_tactics", [])]
+    by_id = {t.taktik_id: t for t in tactics}
+    for taktik_id in candidate_ids:
+        if taktik_id in by_id:
+            return by_id[taktik_id]
+    return None
+
+
+def _draft_and_review(
+    client: SubagentClient,
+    case: Case,
+    plan: dict,
+    tactic: Tactic | None,
+    thread: list[dict],
+    analysis: dict,
+) -> TurnResult:
+    """Run the Yazıcı <-> Kritik loop for one plan. Returns status "approved",
+    "rejected" (caller should re-plan), or "escalated"."""
+    revision_note = None
+    for _ in range(MAX_REVISIONS + 1):
+        try:
+            draft = call_subagent_json(
+                client,
+                SubagentRole.yazici,
+                {
+                    "PLAN": plan,
+                    "STATE": {"asama": case.state.value},
+                    "TACTIC": tactic.body if tactic else None,
+                    "THREAD": thread,
+                    "ANALYSIS": analysis,
+                    "REVISION_NOTE": revision_note,
+                },
+            )
+        except SubagentEscalated as exc:
+            return TurnResult(status="escalated", analysis=analysis, plan=plan, escalation_reason=str(exc))
+
+        try:
+            verdict_data = call_subagent_json(
+                client,
+                SubagentRole.kritik,
+                {"DRAFT": draft, "TACTIC": tactic.body if tactic else None, "PLAN": plan},
+            )
+        except SubagentEscalated as exc:
+            return TurnResult(
+                status="escalated", analysis=analysis, plan=plan, draft=draft, escalation_reason=str(exc)
+            )
+
+        try:
+            verdict = Verdict(verdict_data["verdict"])
+        except ValueError as exc:
+            return TurnResult(
+                status="escalated", analysis=analysis, plan=plan, draft=draft, escalation_reason=str(exc)
+            )
+        if verdict is Verdict.approve:
+            return TurnResult(status="approved", draft=draft, analysis=analysis, plan=plan)
+        if verdict is Verdict.escalate:
+            reason = "; ".join(verdict_data.get("violations", [])) or "kritik escalate"
+            return TurnResult(
+                status="escalated", analysis=analysis, plan=plan, draft=draft, escalation_reason=reason
+            )
+        if verdict is Verdict.reject:
+            return TurnResult(status="rejected", analysis=analysis, plan=plan, draft=draft)
+        # REVISE: loop again with Kritik's correction note.
+        revision_note = verdict_data.get("revision_note")
+
+    return TurnResult(
+        status="escalated", analysis=analysis, plan=plan, escalation_reason="max revisions exceeded"
+    )
+
+
+def run_turn(
+    case: Case,
+    client: SubagentClient,
+    incoming_message: str,
+    thread: list[dict],
+    tactics: list[Tactic],
+    profiles: list[dict] | None = None,
+    intel: dict | None = None,
+) -> TurnResult:
+    """Run one negotiation turn for an incoming counterparty message.
+
+    Mutates `case` in place (state, plan, escalated/escalation_reason) the
+    same way NegotiationEngine does elsewhere; callers persist it via a
+    DB session.
+    """
+    engine = NegotiationEngine(case, tactics=tactics)
+
+    try:
+        analysis = call_subagent_json(
+            client,
+            SubagentRole.analist,
+            {
+                "INCOMING": incoming_message,
+                "THREAD": thread,
+                "PROFILES": profiles or [],
+                "STATE": {"asama": case.state.value},
+            },
+        )
+    except SubagentEscalated as exc:
+        return _escalate(case, TurnResult(status="escalated", escalation_reason=str(exc)))
+
+    try:
+        _apply_recommended_state(engine, analysis["recommended_state"])
+    except (ValueError, InvalidTransition) as exc:
+        return _escalate(case, TurnResult(status="escalated", analysis=analysis, escalation_reason=str(exc)))
+
+    plan = case.plan
+    result = None
+    for _ in range(MAX_REJECT_REPLANS + 1):
+        if plan is None:
+            try:
+                plan = call_subagent_json(
+                    client,
+                    SubagentRole.stratejist,
+                    {
+                        "CASE": {
+                            "vertical": case.vertical,
+                            "state": case.state.value,
+                            "floor": case.min_acceptable_price,
+                        },
+                        "TACTICS": [t.taktik_id for t in tactics],
+                        "INTEL": intel or {},
+                        "PROFILE": analysis,
+                    },
+                )
+            except SubagentEscalated as exc:
+                return _escalate(
+                    case, TurnResult(status="escalated", analysis=analysis, escalation_reason=str(exc))
+                )
+            case.plan = plan
+
+        tactic = _select_tactic(plan, tactics)
+        result = _draft_and_review(client, case, plan, tactic, thread, analysis)
+
+        if result.status != "rejected":
+            break
+        plan = None  # force a fresh Stratejist plan on the next loop
+    else:
+        result = TurnResult(
+            status="escalated", analysis=analysis, plan=plan, escalation_reason="reject after max replans"
+        )
+
+    if result.status == "escalated":
+        return _escalate(case, result)
+    case.escalated = False
+    case.escalation_reason = None
+    return result
+
+
+def _escalate(case: Case, result: TurnResult) -> TurnResult:
+    case.escalated = True
+    case.escalation_reason = result.escalation_reason
+    return result

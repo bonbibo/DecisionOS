@@ -30,6 +30,9 @@ class CaseRead(BaseModel):
     target_price: float | None
     min_acceptable_price: float | None
     max_price: float | None
+    plan: dict | None
+    escalated: bool
+    escalation_reason: str | None
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None

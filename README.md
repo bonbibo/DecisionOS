@@ -14,14 +14,20 @@ app/
   config.py           Settings (env vars / .env)
   database.py          SQLAlchemy engine/session, declarative Base
   models.py            Case, Message, Offer, StateEnum + related enums
-  engine.py             NegotiationEngine: the state machine
+  engine.py             NegotiationEngine: the state machine + vault loaders
+  metrics.py             Dashboard generation from vault frontmatter
+  subagents.py            Subagent prompt loading + JSON response contract
+  orchestrator.py          Turn flow: Analist -> Stratejist -> Yazıcı <-> Kritik
   schemas.py            Pydantic request/response models
+  prompts/                 Subagent system prompts (see below)
   channels/
     whatsapp.py          Meta Cloud API webhook (verify + inbound) stub
     email.py              Gmail API (send + Pub/Sub push) stub
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
-tests/                   pytest suite (state machine + playbook loader)
+scripts/
+  update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
+tests/                   pytest suite (state machine, vault loaders, subagents, orchestrator)
 ```
 
 ## State machine
@@ -157,6 +163,49 @@ score, regenerate it with:
 python scripts/update_metrics.py
 ```
 
+## Subagents (Stratejist / Yazıcı / Kritik / Analist)
+
+`app/prompts/*.md` holds each subagent's full system prompt as plain
+Markdown — a prompt update is a `git push`, not a code change (`app/prompts/README.md`
+documents the flow in detail). `app/subagents.py` loads them and enforces
+the JSON-only response contract every subagent is bound to:
+
+```python
+from app.subagents import SubagentRole, call_subagent_json
+
+# `client` implements SubagentClient.complete(role, system_prompt, payload) -> str
+data = call_subagent_json(client, SubagentRole.analist, {"INCOMING": "...", ...})
+```
+
+A response that isn't valid JSON, or is missing required keys for that role,
+gets one retry; if it's still bad, `call_subagent_json` raises
+`SubagentEscalated` — the caller's cue to hand off to a human.
+
+`app/orchestrator.run_turn(case, client, incoming_message, thread, tactics, ...)`
+wires the full per-message flow:
+
+```
+Analist(JSON) -> apply recommended_state to the case
+-> Stratejist (only if case.plan is empty, or after a Kritik REJECT)
+-> Yazıcı(draft) <-> Kritik(verdict)
+     APPROVE  -> TurnResult(status="approved", draft=...)
+     REVISE   -> back to Yazıcı with a revision_note (max 2 rounds)
+     REJECT   -> re-plan with Stratejist (max 1 replan), then retry
+     ESCALATE -> stop immediately
+```
+
+Any escalation (bad JSON, an illegal state jump, exhausted REVISE/REJECT
+budget, or an explicit Kritik `ESCALATE`) sets `case.escalated = True` and
+`case.escalation_reason`, for a human-in-the-loop queue to pick up.
+
+`SubagentClient` is a `Protocol` — no LLM is wired in yet. Plug in a real
+implementation (e.g. the Anthropic Messages API) that turns
+`(role, system_prompt, payload)` into a raw text completion; `app/prompts/README.md`
+suggests Sonnet for Stratejist/Yazıcı and Haiku for Analist/Kritik
+(`SUBAGENT_MODEL_HINTS`), to be confirmed by cost measurement. Tests exercise
+the full orchestration loop against a scripted fake client
+(`tests/test_orchestrator.py`), so none of this requires an API key to run.
+
 ## Channel stubs
 
 - **WhatsApp** (`app/channels/whatsapp.py`): Meta Cloud API webhook
@@ -171,7 +220,8 @@ python scripts/update_metrics.py
 
 ## Status
 
-This is a backend skeleton: models, migrations, the state machine, and
-channel entry points are wired up, but inbound-message-to-engine dispatch,
-authentication, and outbound message templating are intentionally left as
-follow-up work.
+This is a backend skeleton: models, migrations, the state machine, vault
+loaders, and the subagent orchestration loop are wired up, but a real
+`SubagentClient` (LLM integration), inbound-channel-message-to-`run_turn`
+dispatch, authentication, and the actual send-after-APPROVE step are
+intentionally left as follow-up work.

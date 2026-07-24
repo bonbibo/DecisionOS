@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,6 +53,12 @@ class Case(Base):
     target_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     min_acceptable_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     max_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+
+    # Stratejist's plan JSON (anchor/target/floor/concession_ladder/...); set at case
+    # open and recomputed after a Kritik REJECT verdict. See app/orchestrator.py.
+    plan: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    escalated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    escalation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
