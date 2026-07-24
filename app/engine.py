@@ -295,8 +295,9 @@ def record_offer(
     Caller is responsible for adding/committing the offer via a session.
     """
     round_number = max((o.round_number for o in case.offers), default=0) + 1
+    # Append via the collection (not `case=case` in the constructor) so the
+    # save-update cascade picks up the new row reliably on the next flush.
     offer = Offer(
-        case=case,
         actor=actor,
         round_number=round_number,
         price=price,
@@ -319,8 +320,9 @@ def record_message(
 
     Caller is responsible for adding/committing the message via a session.
     """
+    # Append via the collection (not `case=case` in the constructor) so the
+    # save-update cascade picks up the new row reliably on the next flush.
     message = Message(
-        case=case,
         channel=channel,
         direction=direction,
         sender=sender,

@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", protected_namespaces=("settings_",))
 
     database_url: str = "postgresql+psycopg2://decisionos:decisionos@localhost:5432/decisionos"
 
@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     gmail_client_secret: str = "change-me"
     gmail_refresh_token: str = "change-me"
     gmail_sender_address: str = "negotiator@example.com"
+
+    anthropic_api_key: str = "change-me"
+    model_yazici: str = "claude-sonnet-4-6"
+    model_stratejist: str = "claude-sonnet-4-6"
+    model_analist: str = "claude-haiku-4-5-20251001"
+    model_kritik: str = "claude-haiku-4-5-20251001"
 
 
 @lru_cache

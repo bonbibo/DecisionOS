@@ -13,21 +13,24 @@ app/
   main.py            FastAPI app, health check, minimal Case endpoints
   config.py           Settings (env vars / .env)
   database.py          SQLAlchemy engine/session, declarative Base
-  models.py            Case, Message, Offer, StateEnum + related enums
+  models.py            Case, Message, Offer, LLMCall, OutboundQueueItem, StateEnum + related enums
   engine.py             NegotiationEngine: the state machine + vault loaders
   metrics.py             Dashboard generation from vault frontmatter
   subagents.py            Subagent prompt loading + JSON response contract
   orchestrator.py          Turn flow: Analist -> Stratejist -> Yazıcı <-> Kritik
+  llm.py                   AnthropicSubagentClient (real LLM calls + cost logging)
+  review.py                POST /review/{id}/approve|edit|reject (human-in-the-loop queue)
   schemas.py            Pydantic request/response models
   prompts/                 Subagent system prompts (see below)
   channels/
-    whatsapp.py          Meta Cloud API webhook (verify + inbound) stub
+    whatsapp.py          Meta Cloud API webhook — real dispatch into run_turn()
     email.py              Gmail API (send + Pub/Sub push) stub
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
   update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
-tests/                   pytest suite (state machine, vault loaders, subagents, orchestrator)
+tests/                   pytest suite (state machine, vault loaders, subagents,
+                            orchestrator, LLM client, webhook + review flow)
 ```
 
 ## State machine
@@ -74,8 +77,9 @@ uvicorn app.main:app --reload
 
 - `GET /health` — liveness check
 - `POST /cases` / `GET /cases/{id}` — minimal Case CRUD
-- `GET|POST /channels/whatsapp/webhook` — Meta Cloud API webhook
+- `GET|POST /channels/whatsapp/webhook` — Meta Cloud API webhook (real dispatch, see below)
 - `POST /channels/email/webhook` — Gmail Pub/Sub push endpoint
+- `POST /review/{id}/approve|edit|reject` — human-in-the-loop outbound queue
 
 ### Tests
 
@@ -83,10 +87,13 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-`tests/test_engine.py` covers the state machine transitions: the full
-happy path (`discovery -> ... -> close`), the counter/concession loop,
-walking away early, `close` being terminal, and rejecting illegal skips
-(e.g. `discovery -> counter`).
+Most of the suite (state machine, vault loaders, subagents, orchestrator) is
+pure Python and needs nothing running. `tests/test_llm.py`,
+`tests/test_webhook_and_review.py`, and the `db_session`/`api_client`/`make_case`
+fixtures in `tests/conftest.py` exercise real DB persistence and need a
+reachable Postgres matching `DATABASE_URL` — they never call the real
+Anthropic or Meta Graph APIs (the LLM client and `send_text_message` are
+monkeypatched with fakes), so no API keys are required either.
 
 ## Migrations
 
@@ -198,30 +205,78 @@ Any escalation (bad JSON, an illegal state jump, exhausted REVISE/REJECT
 budget, or an explicit Kritik `ESCALATE`) sets `case.escalated = True` and
 `case.escalation_reason`, for a human-in-the-loop queue to pick up.
 
-`SubagentClient` is a `Protocol` — no LLM is wired in yet. Plug in a real
-implementation (e.g. the Anthropic Messages API) that turns
-`(role, system_prompt, payload)` into a raw text completion; `app/prompts/README.md`
-suggests Sonnet for Stratejist/Yazıcı and Haiku for Analist/Kritik
-(`SUBAGENT_MODEL_HINTS`), to be confirmed by cost measurement. Tests exercise
-the full orchestration loop against a scripted fake client
-(`tests/test_orchestrator.py`), so none of this requires an API key to run.
+`SubagentClient` is a `Protocol`; `app/llm.py`'s `AnthropicSubagentClient` is
+the real implementation (see below). Tests exercise the full orchestration
+loop against a scripted fake client instead (`tests/test_orchestrator.py`),
+so none of that requires an API key to run.
 
-## Channel stubs
+## LLM client (`app/llm.py`)
 
-- **WhatsApp** (`app/channels/whatsapp.py`): Meta Cloud API webhook
-  verification (`GET`) and inbound message handling (`POST`), plus a
-  `send_text_message` helper for outbound replies via the Graph API.
-  Inbound parsing currently just logs the message — wiring it into
-  `NegotiationEngine` + a DB session is left as a `TODO`.
-- **Email** (`app/channels/email.py`): Gmail API client built from an
-  OAuth2 refresh token, a Pub/Sub push receiver (`POST /channels/email/webhook`)
-  for `users.watch()` notifications, and a `send_email` helper. History
-  syncing (`_sync_new_messages`) and dispatch into the engine are stubs.
+`AnthropicSubagentClient` implements `SubagentClient` against the real
+Anthropic Messages API. One instance is bound to a single `case_id` + DB
+session (construct it per turn) so every call it makes can be logged:
+
+```python
+from app.llm import AnthropicSubagentClient
+
+client = AnthropicSubagentClient(case_id=case.id, db=db)
+run_turn(case, client, incoming_message=text, thread=thread, tactics=tactics)
+```
+
+- **Model per role** comes from `Settings` (`MODEL_YAZICI`, `MODEL_STRATEJIST`,
+  `MODEL_ANALIST`, `MODEL_KRITIK` in `.env`) — not hardcoded, so a model swap
+  is a config change. `.env.example`'s defaults follow `app/prompts/README.md`'s
+  suggestion (Sonnet for Stratejist/Yazıcı, Haiku for Analist/Kritik); confirm
+  against real `llm_calls` cost/quality data before trusting it long-term.
+- **JSON enforcement**: the system prompt gets a `"SADECE geçerli JSON döndür."`
+  suffix, and a leading/trailing ` ```json ... ``` ` fence is stripped from the
+  response before it reaches `app.subagents.call_subagent_json`'s existing
+  parse-validate-retry-then-escalate logic — nothing about that retry
+  mechanism changed.
+- **Cost tracking**: every call logs a row to `llm_calls` (`case_id`, `role`,
+  `model`, `input_tokens`, `output_tokens`, `latency_ms`), so a per-role
+  cost/quality query against real traffic is just a SQL query away.
+
+## Review queue (`app/review.py`)
+
+`run_turn` never sends anything by itself. When Kritik returns `APPROVE`,
+the WhatsApp webhook writes the draft into `outbound_queue` with status
+`pending_approval` — actually sending only happens via:
+
+- `POST /review/{id}/approve` — the only endpoint that actually sends: calls
+  `whatsapp.send_text_message` and marks the item `sent` (currently
+  WhatsApp-only; other channels 501 until wired).
+- `POST /review/{id}/edit` — updates the draft's `message` text, status -> `edited`
+  (still requires a follow-up `approve` to actually send).
+- `POST /review/{id}/reject` — status -> `rejected`, never sent.
+
+This is a deliberately simple V1: plain REST, no auth, no UI. A future
+version could drive the same three endpoints from a second WhatsApp bot
+number instead of a web panel — the queue table doesn't care who calls it.
+
+## Channels
+
+- **WhatsApp** (`app/channels/whatsapp.py`): the webhook verification
+  handshake (`GET`) is unchanged. The inbound handler (`POST`) now does the
+  real thing: match the sender's phone number to their active (non-`close`)
+  `Case`, log and drop the message if none matches ("unknown sender"),
+  append it to `Case.messages`, build the last 10 messages as `thread`, load
+  fresh `tactics`/`profiles` from `vault/`, and run
+  `app.orchestrator.run_turn`. An `APPROVE`d draft goes to `outbound_queue`
+  (see above) — nothing is sent from inside the webhook handler itself.
+- **Email** (`app/channels/email.py`): still a stub. Gmail API client built
+  from an OAuth2 refresh token, a Pub/Sub push receiver
+  (`POST /channels/email/webhook`) for `users.watch()` notifications, and a
+  `send_email` helper. History syncing (`_sync_new_messages`) and dispatch
+  into `run_turn` are left as follow-up work (mirroring the WhatsApp wiring
+  above once there's an email vertical to test against).
 
 ## Status
 
-This is a backend skeleton: models, migrations, the state machine, vault
-loaders, and the subagent orchestration loop are wired up, but a real
-`SubagentClient` (LLM integration), inbound-channel-message-to-`run_turn`
-dispatch, authentication, and the actual send-after-APPROVE step are
-intentionally left as follow-up work.
+Models, migrations, the state machine, vault loaders, the subagent
+orchestration loop, a real Anthropic-backed `SubagentClient` with cost
+logging, and the full WhatsApp inbound -> `run_turn` -> human-approval ->
+send loop are wired up end to end. Still open: the Gmail channel's
+`run_turn` dispatch, authentication on the review endpoints (currently
+unauthenticated REST), and multi-channel sending in `POST /review/{id}/approve`
+(WhatsApp only today).

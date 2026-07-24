@@ -1,19 +1,26 @@
-"""Meta (WhatsApp) Cloud API channel stub.
+"""Meta (WhatsApp) Cloud API channel.
 
 Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/set-up-webhooks
 
-This module wires the webhook verification handshake and the inbound
-message endpoint. Payload parsing follows the Cloud API's `messages`
-webhook shape; the actual persistence / engine dispatch is left as a
-TODO so it can be filled in alongside the DB session plumbing.
+Inbound flow: an incoming text message is matched to the sender's active
+Case (by phone number), fed through app.orchestrator.run_turn, and — if
+Kritik approves the draft — queued in outbound_queue for human approval.
+Nothing is ever sent automatically; only POST /review/{id}/approve sends.
 """
 
 import logging
 
 import httpx
-from fastapi import APIRouter, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.database import get_db
+from app.engine import load_profiles, load_tactics, record_message
+from app.llm import AnthropicSubagentClient
+from app.models import Case, ChannelEnum, DirectionEnum, OutboundQueueItem, OutboundStatusEnum, StateEnum
+from app.orchestrator import run_turn
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -21,6 +28,8 @@ settings = get_settings()
 router = APIRouter(prefix="/channels/whatsapp", tags=["whatsapp"])
 
 GRAPH_API_BASE = "https://graph.facebook.com/v20.0"
+VAULT_DIR = "vault"
+THREAD_HISTORY_LIMIT = 10
 
 
 @router.get("/webhook")
@@ -36,7 +45,7 @@ def verify_webhook(
 
 
 @router.post("/webhook")
-async def receive_webhook(request: Request) -> dict:
+async def receive_webhook(request: Request, db: Session = Depends(get_db)) -> dict:
     """Inbound WhatsApp events (messages, statuses, etc.)."""
     payload = await request.json()
 
@@ -44,29 +53,77 @@ async def receive_webhook(request: Request) -> dict:
         for change in entry.get("changes", []):
             value = change.get("value", {})
             for message in value.get("messages", []):
-                _handle_inbound_message(value, message)
+                _handle_inbound_message(db, message)
 
     return {"status": "received"}
 
 
-def _handle_inbound_message(value: dict, message: dict) -> None:
-    """Parse a single inbound WhatsApp message.
-
-    TODO: look up (or create) the Case by the sender's phone number,
-    call app.engine.record_message(...) + NegotiationEngine to advance
-    state, and persist via a DB session.
-    """
+def _handle_inbound_message(db: Session, message: dict) -> None:
     sender = message.get("from")
     msg_type = message.get("type")
     text = message.get("text", {}).get("body") if msg_type == "text" else None
-    logger.info("WhatsApp inbound from=%s type=%s text=%r", sender, msg_type, text)
+
+    if not text:
+        logger.info("WhatsApp inbound from=%s type=%s — no text body, skipping", sender, msg_type)
+        return
+
+    case = db.execute(
+        select(Case)
+        .where(
+            Case.channel == ChannelEnum.whatsapp,
+            Case.counterparty_contact == sender,
+            Case.state != StateEnum.close,
+        )
+        .order_by(Case.created_at.desc())
+    ).scalars().first()
+
+    if case is None:
+        logger.warning("WhatsApp inbound from unknown sender=%s — no active case, dropping", sender)
+        return
+
+    record_message(
+        case,
+        channel=ChannelEnum.whatsapp,
+        direction=DirectionEnum.inbound,
+        content=text,
+        sender=sender,
+        raw_payload=message,
+    )
+    db.flush()
+
+    thread = [
+        {"direction": m.direction.value, "content": m.content}
+        for m in case.messages[-THREAD_HISTORY_LIMIT:]
+    ]
+    tactics = load_tactics(VAULT_DIR)
+    profiles = [
+        {"profile_id": p.profile_id, "ad": p.ad, "body": p.body} for p in load_profiles(VAULT_DIR)
+    ]
+
+    client = AnthropicSubagentClient(case_id=case.id, db=db)
+    result = run_turn(case, client, incoming_message=text, thread=thread, tactics=tactics, profiles=profiles)
+
+    if result.status == "approved" and result.draft:
+        db.add(
+            OutboundQueueItem(
+                case=case,
+                channel=ChannelEnum.whatsapp,
+                recipient=sender,
+                message=result.draft["message"],
+                tactic_used=result.draft.get("tactic_used"),
+                status=OutboundStatusEnum.pending_approval,
+            )
+        )
+
+    db.commit()
 
 
 async def send_text_message(to: str, body: str) -> dict:
     """Send a free-form text message via the Cloud API.
 
-    Stub: requires an active 24h customer service window or an approved
-    template outside of it. Returns the Graph API response JSON.
+    Only called from POST /review/{id}/approve — never automatically.
+    Requires an active 24h customer service window or an approved template
+    outside of it. Returns the Graph API response JSON.
     """
     url = f"{GRAPH_API_BASE}/{settings.whatsapp_phone_number_id}/messages"
     headers = {"Authorization": f"Bearer {settings.whatsapp_access_token}"}
