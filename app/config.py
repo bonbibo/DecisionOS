@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     # writing reports/YYYY-MM-DD.md. Unset (None) = file only, no error.
     ops_email: str | None = None
 
+    # The name Yazıcı/Intake sign their messages with ("X Danışmanlık adına
+    # yazıyorum"). The real name is a pending decision
+    # (vault/06-Kararlar/KR-004-sirket-kimligi.md, durum: taslak) — this
+    # lets the code run with a placeholder without waiting on that decision.
+    # See app.subagents.load_subagent_prompt's {{IDENTITY_NAME}} injection.
+    identity_name: str = "X Danışmanlık"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -1,10 +1,17 @@
-"""Daily operations report (draft — Package J).
+"""Daily operations report (draft — Package J, extended by Package K).
 
 Pure aggregation over existing tables — no new event log. One deliberate
 approximation, documented where it's computed: "escalated cases" counts
 Case rows with a non-null escalation_context whose updated_at falls in the
 window, since there's no dedicated escalation-event table (Case.updated_at
 moves on any field change, so this can over/undercount slightly).
+
+Package K adds `phone_request_escalations`: the count within that same
+window whose `escalation_category == phone_request` — this is the exact
+numerator KR-003 (`vault/06-Kararlar/KR-003-ses-kanali-esigi.md`) measures
+against total escalations to decide whether voice-channel investment is
+justified. The report doesn't make that call; it just makes the ratio
+visible.
 """
 
 from dataclasses import dataclass
@@ -13,7 +20,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Case, LLMCall, OutcomeEnum, Payment, PaymentStatusEnum, WaitlistSignup
+from app.models import Case, EscalationCategoryEnum, LLMCall, OutcomeEnum, Payment, PaymentStatusEnum, WaitlistSignup
 
 
 @dataclass
@@ -23,6 +30,7 @@ class DailyReport:
     closed_won: int
     closed_walked: int
     escalated_cases: int
+    phone_request_escalations: int
     llm_calls: int
     llm_input_tokens: int
     llm_output_tokens: int
@@ -56,6 +64,14 @@ def compute_daily_report(db: Session, day: date | None = None) -> DailyReport:
         )
     ).scalar_one()
 
+    phone_request_escalations = db.execute(
+        select(func.count(Case.id)).where(
+            Case.escalation_category == EscalationCategoryEnum.phone_request,
+            Case.updated_at >= start,
+            Case.updated_at < end,
+        )
+    ).scalar_one()
+
     llm_calls, llm_input_tokens, llm_output_tokens = db.execute(
         select(
             func.count(LLMCall.id),
@@ -82,6 +98,7 @@ def compute_daily_report(db: Session, day: date | None = None) -> DailyReport:
         closed_won=closed_won,
         closed_walked=closed_walked,
         escalated_cases=escalated_cases,
+        phone_request_escalations=phone_request_escalations,
         llm_calls=llm_calls,
         llm_input_tokens=llm_input_tokens,
         llm_output_tokens=llm_output_tokens,
@@ -91,6 +108,11 @@ def compute_daily_report(db: Session, day: date | None = None) -> DailyReport:
 
 
 def render_daily_report(report: DailyReport) -> str:
+    phone_request_ratio = (
+        f"%{report.phone_request_escalations / report.escalated_cases * 100:.0f}"
+        if report.escalated_cases
+        else "—"
+    )
     lines = [
         f"# Günlük Rapor — {report.day.isoformat()}",
         "",
@@ -100,6 +122,7 @@ def render_daily_report(report: DailyReport) -> str:
         f"| Kapanan (kazanıldı) | {report.closed_won} |",
         f"| Kapanan (vazgeçildi) | {report.closed_walked} |",
         f"| Eskale olan vaka | {report.escalated_cases} |",
+        f"| Telefon talebi eskalasyonu | {report.phone_request_escalations} ({phone_request_ratio}) |",
         f"| LLM çağrısı | {report.llm_calls} |",
         f"| LLM girdi token | {report.llm_input_tokens} |",
         f"| LLM çıktı token | {report.llm_output_tokens} |",

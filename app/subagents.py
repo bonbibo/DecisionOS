@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Protocol
 
+from app.config import get_settings
+
 DEFAULT_PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 
@@ -63,8 +65,13 @@ class SubagentEscalated(Exception):
 
 
 def load_subagent_prompt(role: SubagentRole, prompts_dir: Path | str = DEFAULT_PROMPTS_DIR) -> str:
-    """Read a subagent's system prompt from app/prompts/<role>.md, fresh every call."""
-    return (Path(prompts_dir) / f"{role.value}.md").read_text(encoding="utf-8")
+    """Read a subagent's system prompt from app/prompts/<role>.md, fresh every
+    call, with `{{IDENTITY_NAME}}` replaced by Settings.identity_name — see
+    docs/MASTER-SPEC-v3.md Package K / vault/06-Kararlar/KR-004-sirket-
+    kimligi.md (the actual name is still a pending decision; this just
+    means the prompt text doesn't have to hardcode a placeholder name)."""
+    text = (Path(prompts_dir) / f"{role.value}.md").read_text(encoding="utf-8")
+    return text.replace("{{IDENTITY_NAME}}", get_settings().identity_name)
 
 
 class SubagentClient(Protocol):

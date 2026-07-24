@@ -85,6 +85,26 @@ class PaymentStatusEnum(str, enum.Enum):
     failed = "failed"
 
 
+class EscalationCategoryEnum(str, enum.Enum):
+    """Which Kritik checklist item (app/prompts/kritik.md) triggered an
+    ESCALATE, or a generic bucket for the non-Kritik escalation paths (max
+    revisions/replans exhausted, an unparseable subagent response). Set by
+    app.orchestrator._categorize — see docs/MASTER-SPEC-v3.md Package K:
+    this exists purely to make KR-003's phone-request threshold
+    measurable, not to change any escalation behavior."""
+
+    floor_violation = "floor_violation"  # madde 1
+    info_leak = "info_leak"  # madde 2
+    fabrication = "fabrication"  # madde 3
+    unconditional_concession = "unconditional_concession"  # madde 4
+    tactic_mismatch = "tactic_mismatch"  # madde 5
+    premature_acceptance = "premature_acceptance"  # madde 6
+    phone_request = "phone_request"  # madde 7, "telefon" alt dizesi
+    escalation_signal_other = "escalation_signal_other"  # madde 7, diğer (hukuki/agresyon/kimlik)
+    decision_conflict = "decision_conflict"  # madde 8
+    other = "other"  # max revizyon/reject, parse hatası vb.
+
+
 class OptInMethodEnum(str, enum.Enum):
     """How an OptIn record was created — an audit trail, not itself the
     guard's source of truth (see app.channels.whatsapp._has_valid_opt_in,
@@ -198,6 +218,12 @@ class Case(Base):
     # trail (the LLM-side half is LLMCall.request_payload/response_text). See
     # app.orchestrator.resume_after_escalation.
     escalation_context: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Which Kritik checklist item (or generic bucket) triggered the most
+    # recent escalation — see EscalationCategoryEnum. Purely for measuring
+    # KR-003's voice-channel threshold; doesn't affect any behavior.
+    escalation_category: Mapped[EscalationCategoryEnum | None] = mapped_column(
+        Enum(EscalationCategoryEnum, name="escalation_category_enum"), nullable=True
+    )
     # Set once Analist's recommended_state distinguishes a real close (won)
     # from a walk-away (walked) — None while still open. See
     # app.orchestrator._apply_recommended_state, app.payments.

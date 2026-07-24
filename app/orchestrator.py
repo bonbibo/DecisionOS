@@ -17,16 +17,52 @@ module handles the higher-level APPROVE/REVISE/REJECT/ESCALATE branching on
 top of that.
 """
 
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.engine import InvalidTransition, NegotiationEngine, Tactic, record_offer
-from app.models import ActorEnum, Case, OutcomeEnum, StateEnum
+from app.models import ActorEnum, Case, EscalationCategoryEnum, OutcomeEnum, StateEnum
 from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, Verdict, call_subagent_json
 from app.vault import VaultReader
 
 MAX_REVISIONS = 2
 MAX_REJECT_REPLANS = 1
+
+# Kritik's checklist items are numbered 1-8 (app/prompts/kritik.md) and its
+# `violations` entries are always "<madde no>: <açıklama>" — this maps the
+# first matched item number to a category (Package K, KR-003's measurement).
+# Item 7 covers several distinct signals (phone/legal/aggression/identity);
+# only "telefon" substring matches count as phone_request, the rest fall
+# into escalation_signal_other — see docs/MASTER-SPEC-v3.md Package K for
+# why item 7 itself isn't split (checklist numbers must never change, per
+# the subagent-kontrati skill).
+_ESCALATION_ITEM_CATEGORY = {
+    1: EscalationCategoryEnum.floor_violation,
+    2: EscalationCategoryEnum.info_leak,
+    3: EscalationCategoryEnum.fabrication,
+    4: EscalationCategoryEnum.unconditional_concession,
+    5: EscalationCategoryEnum.tactic_mismatch,
+    6: EscalationCategoryEnum.premature_acceptance,
+    8: EscalationCategoryEnum.decision_conflict,
+}
+_ESCALATION_ITEM_RE = re.compile(r"(?:^|;\s*)(\d+):")
+
+
+def _categorize_escalation(reason: str | None) -> EscalationCategoryEnum:
+    if not reason:
+        return EscalationCategoryEnum.other
+    match = _ESCALATION_ITEM_RE.search(reason)
+    if not match:
+        return EscalationCategoryEnum.other
+    item = int(match.group(1))
+    if item == 7:
+        return (
+            EscalationCategoryEnum.phone_request
+            if "telefon" in reason.lower()
+            else EscalationCategoryEnum.escalation_signal_other
+        )
+    return _ESCALATION_ITEM_CATEGORY.get(item, EscalationCategoryEnum.other)
 
 
 def _vault_block(role: SubagentRole, vault_dir: str = "vault") -> dict:
@@ -267,6 +303,7 @@ def run_turn(
 def _escalate(case: Case, result: TurnResult, incoming_message: str | None = None) -> TurnResult:
     case.escalated = True
     case.escalation_reason = result.escalation_reason
+    case.escalation_category = _categorize_escalation(result.escalation_reason)
     if incoming_message is not None:
         context = dict(case.escalation_context or {})
         context["incoming_message"] = incoming_message

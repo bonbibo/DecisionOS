@@ -727,6 +727,36 @@ Closes `docs/MASTER-SPEC-v3.md` Package J.
   arguments mention a secret `Settings` field name — guards against a
   future debug line accidentally logging a token/key.
 
+## Ses kapısı (`vault/06-Kararlar/KR-003-ses-kanali-esigi.md`)
+
+Closes `docs/MASTER-SPEC-v3.md` Package K — deliberately almost no code,
+per the spec: the decision itself ("does voice/IVR investment make
+sense yet?") stays a human call, `durum: taslak` in the vault; the only
+code is what makes that decision *measurable*.
+
+- `EscalationCategoryEnum` + `Case.escalation_category`: which Kritik
+  checklist item (`app/prompts/kritik.md`, numbered 1-8) triggered the
+  most recent `ESCALATE`, set by `app.orchestrator._categorize_escalation`
+  in `_escalate()`. Parses Kritik's already-numbered `violations` text
+  (`"<madde no>: <açıklama>"`) — checklist item numbers are never
+  reassigned (`subagent-kontrati` skill), so this is stable to parse.
+  Item 7 covers several distinct signals (phone/legal/aggression/
+  identity) and isn't split (same reason); only the `"telefon"` substring
+  within an item-7 violation maps to `phone_request`, everything else
+  in item 7 falls into `escalation_signal_other`.
+- `app.reports`' daily report gained a `phone_request_escalations` count
+  + ratio — the exact number `KR-003` says to watch: **no voice-channel
+  investment until `phone_request` exceeds 40% of total escalations.**
+  The report makes the ratio visible; it doesn't act on it.
+- **Also in this package** (bundled rather than a separate PR — see spec's
+  "kapsam dışı" notes): `vault/06-Kararlar/KR-004-sirket-kimligi.md`
+  (`durum: taslak`) records that the company/brand name is still an open
+  decision, and `Settings.identity_name` (env `IDENTITY_NAME`) +
+  `app.subagents.load_subagent_prompt`'s `{{IDENTITY_NAME}}` injection
+  (`app/prompts/yazici.md`, `intake.md`) mean the code doesn't have to
+  wait on that decision — it runs today with a placeholder name, and
+  picking a real one is a config change, not a code change.
+
 ## Öğrenme Mimarisi
 
 This closes out the "Vault-Driven Decision Engine" system update (PR-A
@@ -766,28 +796,77 @@ from `vault/` at call time. Test count has not regressed at any point across
 PR-A through PR-E (98 -> 112 as tests were *added*, never removed to make a
 change pass).
 
+### MASTER-SPEC-v3 — F-K (waitlist -> capture)
+
+`docs/MASTER-SPEC-v3.md` closes the gap from "working negotiation engine"
+to "sellable product": market data feeding the engine, money actually
+changing hands, a compliant way to reach a stranger, a public front door,
+and the operational scaffolding a real deploy needs.
+
+- **F — Market Intel.** `app/intel/` (Crawlee/Playwright-targeted
+  adapters, real selectors still unverified — see the package's own
+  "İNSAN GEREKLİ" note) aggregates comparable listings into
+  `vault/09-Piyasa-Verisi/<dikey>.md` — the third "system-generated"
+  vault folder, alongside `05-Metrikler/dashboard.md`. Stratejist's
+  `INTEL` payload key is now auto-populated from it, no caller change.
+- **G — Stripe pre-auth -> capture.** A card is held (never charged) at
+  case open, captured only if the case closes `won` (`Case.outcome`, set
+  from the same Analist signal that already drives the state machine),
+  released if `walked`. `app.engine.record_offer` — built in V1 but never
+  actually called — is now wired into `run_turn` so there's real offer
+  history to compute the success fee from.
+- **H — Email-first contact + opt-in guard.** `send_text_message` now
+  refuses to send *anything* without a real inbound WhatsApp message from
+  the recipient in the last 24h — one unconditional choke point, not a
+  per-case judgment call. A counterparty we've never talked to gets an
+  email with a click-to-WhatsApp link instead, so if a conversation
+  starts, they started it.
+- **I — Landing + waitlist.** `app/public/` — the trust face and the
+  demand signal, plain HTML + one inline `<script>`, no build step.
+- **J — Production hardening.** JSON structured logs + request-id
+  correlation, `GET /health/deep`, a daily ops report
+  (`scripts/daily_report.py`), `docs/RUNBOOK.md`.
+- **K — Voice gate.** Almost no code on purpose: `KR-003` (vault, `durum:
+  taslak`) is the actual decision; `Case.escalation_category` +
+  the daily report's `phone_request` ratio are just what make that
+  decision measurable instead of a guess.
+
+Same rule as A-E: no negotiation-domain constant hardcoded in `app/`, and
+test count only ever grew (146 at the start of F -> 229 after K).
+
 ## Status
 
-Models, migrations, the state machine, the vault-driven engine (pricing,
-decisions, segments — see Öğrenme Mimarisi above), the subagent
-orchestration loop (including intake/onboarding), a real Anthropic-backed
-`SubagentClient` with cost logging, and the full WhatsApp + web
-intake-or-negotiation routing -> human-approval -> send loop (via
-`POST /review/*` or the `/admin` panel) are wired up end to end, with every
-inbound/write surface authenticated (WhatsApp signature verification,
-`REVIEW_TOKEN` bearer/Basic auth on review + admin, web session tokens).
-Kritik's `ESCALATE` verdict is a real human-in-the-loop question/answer
-loop now, not a dead end (`resume_after_escalation`, `POST
-/review/case/{id}/answer`, and the `/admin` panel's equivalent form — see
-Human-in-the-loop question/answer above), and every subagent call's full
-input/output is kept in `llm_calls` as a dataset (`request_payload`,
-`response_text`), not just token counts. Still open: the Gmail channel's
-`run_turn`/intake dispatch, multi-channel sending in `POST
-/review/{id}/approve` (WhatsApp only today — a web-origin case's
-counterparty draft is still queued as `channel=whatsapp`, since the
-counterparty side has no web presence), auth/identity on the intake side
-(any WhatsApp number or `{email, phone}` pair can start a case — reasonable
-for a public onboarding flow, but worth a deliberate look before scaling
-pilots), and an actual dataset *export* (JSONL/fine-tuning format) on top
-of the `llm_calls` storage — the data's there, but nothing reads it out yet
-beyond `/admin/costs`' token/latency rollup.
+Both specs (`SYSTEM UPDATE v2`, PR-A..E, and `MASTER-SPEC-v3`, Package
+F..K) are implemented end to end: models, migrations, the state machine,
+the vault-driven engine (pricing, decisions, segments, market intel), the
+5-subagent orchestration loop with a real human-in-the-loop question/
+answer path on every `ESCALATE`, a real Anthropic-backed `SubagentClient`
+with full request/response dataset logging, WhatsApp + web
+intake-or-negotiation routing with a real opt-in guard and payment
+pre-auth/capture, a public landing/waitlist, and production scaffolding
+(structured logs, deep healthcheck, daily ops report, runbook). Every
+inbound/write surface is authenticated or guarded (WhatsApp signature
+verification, Stripe webhook signature verification, `REVIEW_TOKEN`
+bearer/Basic auth on review + admin, web session tokens, the WhatsApp
+opt-in guard, the payment pre-auth guard). Test count has never regressed
+across either spec (98 -> 229).
+
+Deliberately out of scope (per explicit user sign-off, `docs/MASTER-
+SPEC-v3.md`'s "Kapsam dışı" section): the legal-consultation escalation
+signal stays a plain `ESCALATE` (no dedicated legal flow); the company
+name/identity is a pending decision (`KR-004`, `IDENTITY_NAME` env
+placeholder in the meantime); and demand-validation conversations with
+real customers are human work, not code.
+
+Still open (see each package's "İNSAN GEREKLİ" note in the commit that
+closed it, and the eventual `docs/PROGRESS.md`): live verification of the
+Property Finder/Bayut selectors and Railway cron wiring (F), a real Stripe
+account + webhook registration (G), `WHATSAPP_PUBLIC_NUMBER` + Gmail OAuth
+env values and a live click-to-WhatsApp check (H), real domain/DNS (I), a
+real log aggregator/alerting integration (J, not requested by the spec),
+and an actual dataset *export* (JSONL/fine-tuning format) on top of the
+`llm_calls` storage — the data's there, nothing reads it out yet beyond
+`/admin/costs`' token/latency rollup. The Gmail channel's inbound sync
+(`_sync_new_messages`) and dispatch into `run_turn` also remain a stub —
+email is used one-way (initial contact, reports) so far, never negotiated
+over directly.
