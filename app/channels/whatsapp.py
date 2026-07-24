@@ -19,12 +19,14 @@ POST /review/{id}/approve sends.
 import hashlib
 import hmac
 import logging
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.channels import email
 from app.config import get_settings
 from app.database import get_db
 from app.engine import load_profiles, load_tactics, record_message
@@ -44,6 +46,8 @@ from app.models import (
 )
 from app.orchestrator import TurnResult, run_turn, status_message_for
 from app.payments import handle_turn_outcome
+
+OPT_IN_WINDOW = timedelta(hours=24)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -222,19 +226,63 @@ async def _handle_intake_message(db: Session, sender: str, text: str, raw_messag
 
     db.commit()
 
+    if result.case is not None:
+        # Email-first initial contact (Package H) — no-op if the case has no
+        # counterparty_email. Never blocks the reply to our own customer.
+        email.send_initial_contact_email(result.case)
+
     if result.reply:
-        await send_text_message(sender, result.reply)
+        await send_text_message(sender, result.reply, db)
 
 
-async def send_text_message(to: str, body: str) -> dict:
+class OptInRequiredError(Exception):
+    """Raised by send_text_message when `to` has no valid opt-in — see
+    _has_valid_opt_in. The Package H guard: this is checked unconditionally
+    (not just for counterparty-audience sends) so there is exactly one
+    choke point where a WhatsApp message can leave the system at all."""
+
+    def __init__(self, to: str):
+        self.to = to
+        super().__init__(f"no valid WhatsApp opt-in for {to}")
+
+
+def _has_valid_opt_in(db: Session, recipient: str) -> bool:
+    """True iff `recipient` has sent us an inbound WhatsApp message within
+    Meta's own 24h customer-service window — the one real opt-in signal a
+    business-initiated message can rely on (see docs/MASTER-SPEC-v3.md
+    Package H). A recipient who has only visited the /optin/{case_id}
+    landing page (OptIn.method=email_link_click) but never actually
+    messaged us does NOT pass this — that's an audit record, not consent
+    to receive a business-initiated message yet."""
+    cutoff = datetime.now(timezone.utc) - OPT_IN_WINDOW
+    return (
+        db.execute(
+            select(Message.id)
+            .where(
+                Message.sender == recipient,
+                Message.direction == DirectionEnum.inbound,
+                Message.channel == ChannelEnum.whatsapp,
+                Message.created_at >= cutoff,
+            )
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+
+async def send_text_message(to: str, body: str, db: Session) -> dict:
     """Send a free-form text message via the Cloud API.
 
-    Called directly for intake replies (low-risk, our own customer) and from
+    Called directly for intake replies (always passes the guard below,
+    since the recipient just messaged us to trigger the reply) and from
     POST /review/{id}/approve for negotiation/status drafts — never
     automatically for anything headed to a counterparty. Requires an active
     24h customer service window or an approved template outside of it.
     Returns the Graph API response JSON.
     """
+    if not _has_valid_opt_in(db, to):
+        raise OptInRequiredError(to)
+
     url = f"{GRAPH_API_BASE}/{settings.whatsapp_phone_number_id}/messages"
     headers = {"Authorization": f"Bearer {settings.whatsapp_access_token}"}
     payload = {

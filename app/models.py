@@ -85,6 +85,16 @@ class PaymentStatusEnum(str, enum.Enum):
     failed = "failed"
 
 
+class OptInMethodEnum(str, enum.Enum):
+    """How an OptIn record was created — an audit trail, not itself the
+    guard's source of truth (see app.channels.whatsapp._has_valid_opt_in,
+    which only trusts an actual inbound WhatsApp message)."""
+
+    whatsapp_first_message = "whatsapp_first_message"
+    email_link_click = "email_link_click"
+    manual_operator = "manual_operator"
+
+
 class User(Base):
     """The end customer — the person texting the agent on WhatsApp to ask for help."""
 
@@ -145,6 +155,9 @@ class Case(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     counterparty_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     counterparty_contact: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Optional — enables Package H's email-first initial contact
+    # (app.channels.email.send_initial_contact_email) when known.
+    counterparty_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     state: Mapped[StateEnum] = mapped_column(
         Enum(StateEnum, name="state_enum"), nullable=False, default=StateEnum.discovery
@@ -332,3 +345,20 @@ class Payment(Base):
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     case: Mapped["Case"] = relationship(back_populates="payment")
+
+
+class OptIn(Base):
+    """An audit record of consent to receive a WhatsApp message from us —
+    see app.channels.whatsapp._has_valid_opt_in for the actual guard logic
+    (which only trusts a real inbound message, not this table alone)."""
+
+    __tablename__ = "opt_ins"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"), nullable=True)
+
+    contact: Mapped[str] = mapped_column(String(255), nullable=False)
+    channel: Mapped[ChannelEnum] = mapped_column(Enum(ChannelEnum, name="channel_enum"), nullable=False)
+    method: Mapped[OptInMethodEnum] = mapped_column(Enum(OptInMethodEnum, name="opt_in_method_enum"), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

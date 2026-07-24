@@ -199,7 +199,7 @@ def test_review_approve_sends_and_marks_sent(api_client, make_case, db_session, 
 
     sent_calls = []
 
-    async def fake_send_text_message(to, body):
+    async def fake_send_text_message(to, body, db=None):
         sent_calls.append((to, body))
         return {"messages": [{"id": "wamid.fake"}]}
 

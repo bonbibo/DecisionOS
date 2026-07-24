@@ -571,12 +571,40 @@ defaulting to `RealStripeClient()`.
     directly, not queued.
   Nothing negotiation-facing is ever sent from inside the webhook handler
   itself — only `POST /review/{id}/approve` sends counterparty/client-status drafts.
-- **Email** (`app/channels/email.py`): still a stub. Gmail API client built
-  from an OAuth2 refresh token, a Pub/Sub push receiver
-  (`POST /channels/email/webhook`) for `users.watch()` notifications, and a
-  `send_email` helper. History syncing (`_sync_new_messages`) and dispatch
-  into `run_turn` are left as follow-up work (mirroring the WhatsApp wiring
-  above once there's an email vertical to test against).
+  - **Opt-in guard (Package H).** `send_text_message` now requires a `db`
+    session and checks `_has_valid_opt_in` before it will send *anything* —
+    unconditionally, not just for counterparty-audience messages, so there
+    is exactly one choke point where a WhatsApp message can leave the
+    system at all, and it's the same check every time. The only thing that
+    counts as opt-in: an inbound WhatsApp `Message` from that recipient
+    within the last 24h (Meta's own service-window rule) — visiting the
+    `/optin/{case_id}` landing page is recorded as an `OptIn` audit row but
+    does **not** satisfy the guard on its own; only the recipient actually
+    messaging first does. No opt-in -> `OptInRequiredError` ->
+    `POST /review/{id}/approve` and the `/admin` equivalent both turn that
+    into a `409`.
+- **Email** (`app/channels/email.py`): the Gmail send path
+  (`send_email`) is real; inbound sync (`_sync_new_messages`,
+  `POST /channels/email/webhook`) is still a stub — dispatch into `run_turn`
+  is left as follow-up work once there's a reason to negotiate over email
+  itself, not just use it for first contact (below).
+  - **Email-first initial contact (Package H).** A cold WhatsApp message to
+    a counterparty who has never talked to us risks Meta's opt-in policy
+    (and the guard above would block it anyway). `send_initial_contact_email
+    (case)` — called right after case creation in both
+    `app.channels.whatsapp` and `app.channels.web` whenever
+    `Case.counterparty_email` is known (an optional field the Intake
+    subagent may collect, `ev_sahibi_email`) — sends a short templated
+    email instead, with a link to `GET /optin/{case_id}` (public, no auth —
+    a Jinja landing page under `app/public/templates/`). That page's
+    **"WhatsApp'ta devam et"** button is a `https://wa.me/<WHATSAPP_PUBLIC_
+    NUMBER>` click-to-WhatsApp link — if the counterparty clicks it and
+    messages us, *they* initiated the WhatsApp conversation, which is
+    real, Meta-compliant opt-in (and is exactly what the guard above
+    checks for) rather than something this system claims on their behalf.
+    A no-op when there's no `counterparty_email` — most cases still start
+    on WhatsApp directly via an approved `outbound_queue` item once opted
+    in some other way (e.g. `manual_operator`).
 - **Web** (`app/channels/web.py`): our own customers talking to the agent
   directly through a browser instead of WhatsApp, with a synchronous
   request/response shape instead of a webhook:

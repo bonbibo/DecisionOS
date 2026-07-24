@@ -18,6 +18,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from app.config import get_settings
+from app.models import Case
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -94,3 +95,29 @@ def send_email(to: str, subject: str, body: str, thread_id: str | None = None) -
         body_payload["threadId"] = thread_id
 
     return service.users().messages().send(userId="me", body=body_payload).execute()
+
+
+def send_initial_contact_email(case: Case) -> dict | None:
+    """First contact with a counterparty we've never talked to — email, not
+    WhatsApp, so there's no opt-in wall to cross (Package H). The email's
+    /optin/{case_id} link lets the recipient start a WhatsApp conversation
+    themselves (click-to-WhatsApp) — the moment they do, that's a real,
+    Meta-compliant opt-in (they messaged first), not something this system
+    claims on their behalf. No-op (returns None) if the case has no
+    counterparty_email — most cases still start on WhatsApp directly via
+    an approved outbound_queue item once opted in some other way."""
+    if not case.counterparty_email:
+        return None
+
+    optin_url = f"{settings.public_base_url.rstrip('/')}/optin/{case.id}"
+    name = case.counterparty_name or ""
+    greeting = f"Merhaba {name}," if name else "Merhaba,"
+    body = (
+        f"{greeting}\n\n"
+        f"{case.item_description or 'mülkünüz'} için kiracınız adına yazıyoruz — kısa bir görüşme "
+        f"talep ediyoruz. Detaylar ve iletişim için: {optin_url}\n\n"
+        "Bu bağlantıdan devam ederseniz WhatsApp üzerinden birebir konuşabiliriz.\n\n"
+        "İyi günler."
+    )
+    subject = "Kiralama hakkında kısa bir not"
+    return send_email(case.counterparty_email, subject, body)

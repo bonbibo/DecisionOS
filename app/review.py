@@ -78,7 +78,10 @@ async def approve(msg_id: uuid.UUID, body: ReviewApproveRequest, db: Session = D
         except PreAuthRequiredError as exc:
             raise HTTPException(status_code=409, detail="payment pre-authorization required") from exc
 
-    await whatsapp.send_text_message(item.recipient, item.message)
+    try:
+        await whatsapp.send_text_message(item.recipient, item.message, db)
+    except whatsapp.OptInRequiredError as exc:
+        raise HTTPException(status_code=409, detail=f"no valid WhatsApp opt-in for {exc.to}") from exc
 
     now = datetime.now(timezone.utc)
     item.status = OutboundStatusEnum.sent

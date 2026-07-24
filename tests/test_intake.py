@@ -145,6 +145,26 @@ def test_run_intake_turn_confirmation_creates_case_and_calls_stratejist(make_use
     assert case in user.cases
 
 
+def test_run_intake_turn_confirmation_sets_counterparty_email_when_collected(make_user):
+    user = make_user()
+    user.intake_state = {
+        "collected_fields": {
+            "hedef_kira": 90000,
+            "ev_sahibi_iletisim": "+9715000000",
+            "ev_sahibi_email": "landlord@example.com",
+        },
+        "missing_fields": [],
+        "ready": True,
+        "awaiting_confirmation": True,
+    }
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient({SubagentRole.stratejist: [_stratejist_response()]})
+
+    result = run_intake_turn(user, client, "evet", [], tactics)
+
+    assert result.case.counterparty_email == "landlord@example.com"
+
+
 def test_run_intake_turn_writes_memory_updates(make_user):
     user = make_user()
     tactics = load_tactics(VAULT_DIR)

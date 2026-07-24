@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.channels import email
 from app.database import get_db
 from app.engine import load_tactics, record_message
 from app.intake import run_intake_turn
@@ -177,6 +178,11 @@ def _handle_intake_message(db: Session, user: User, text: str) -> WebChatRespons
     if result.case is not None:
         db.add(result.case)
     db.commit()
+
+    if result.case is not None:
+        # Email-first initial contact (Package H) — no-op if the case has no
+        # counterparty_email.
+        email.send_initial_contact_email(result.case)
 
     case_id = result.case.id if result.case else None
     state = result.case.state if result.case else None

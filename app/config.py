@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     whatsapp_access_token: str = "change-me"
     whatsapp_phone_number_id: str = "change-me"
     whatsapp_app_secret: str = "change-me"
+    # The actual public phone number (digits only, e.g. "15550001234", no
+    # '+') — NOT whatsapp_phone_number_id (that's the Graph API resource
+    # ID). Used to build https://wa.me/<number> click-to-WhatsApp links
+    # (see app/channels/optin.py, Package H).
+    whatsapp_public_number: str = "change-me"
 
     gmail_client_id: str = "change-me"
     gmail_client_secret: str = "change-me"

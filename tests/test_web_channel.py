@@ -349,7 +349,7 @@ def test_admin_approve_sends_and_marks_sent(api_client, make_case, db_session, m
 
     sent = []
 
-    async def fake_send_text_message(to, body):
+    async def fake_send_text_message(to, body, db=None):
         sent.append((to, body))
         return {"messages": [{"id": "wamid.fake"}]}
 

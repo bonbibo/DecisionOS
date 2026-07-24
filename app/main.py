@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.admin import router as admin_router
-from app.channels import email, web, whatsapp
+from app.channels import email, optin, web, whatsapp
 from app.config import get_settings
 from app.database import get_db
 from app.models import Case
@@ -24,6 +24,7 @@ app.include_router(web.router)
 app.include_router(review_router)
 app.include_router(admin_router)
 app.include_router(payments_router)
+app.include_router(optin.router)
 
 
 @app.get("/health")

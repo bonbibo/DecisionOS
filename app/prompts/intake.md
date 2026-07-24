@@ -25,6 +25,9 @@ sadece müşteriyle konuşup vaka açılışı için gereken bilgiyi çıkarırs
 - `tavan_kira` — ev sahibinin şu anki talebi / mevcut tavan (sayı, AED), varsa
 - `ev_sahibi_iletisim` — ev sahibi/emlakçının WhatsApp numarası veya iletişim bilgisi — zorunlu
 - `ev_sahibi_adi` — ev sahibi/emlakçı adı, varsa
+- `ev_sahibi_email` — ev sahibi/emlakçının e-posta adresi, varsa (opsiyonel — biliniyorsa ilk temasın
+  e-posta ile kurulmasını sağlar, WhatsApp opt-in duvarını aşan akış için; sormaya ısrar etme, kullanıcı
+  bilmiyorsa null bırak)
 - `deadline` — sözleşme/karar tarihi, varsa (serbest metin)
 - `odeme_gucu_tek_cek` — tek çek ödeyebilir mi (true/false/null)
 

@@ -122,6 +122,7 @@ def _create_case_from_fields(user: User, fields: dict) -> Case:
         state=StateEnum.discovery,
         counterparty_name=fields.get("ev_sahibi_adi"),
         counterparty_contact=fields.get("ev_sahibi_iletisim") or "",
+        counterparty_email=fields.get("ev_sahibi_email"),
         item_description=fields.get("mulk_adres"),
         target_price=fields.get("hedef_kira"),
         min_acceptable_price=fields.get("taban_kira"),

@@ -71,7 +71,7 @@ def _post_webhook(api_client, payload: dict):
 def _fake_send(monkeypatch):
     sent = []
 
-    async def fake_send_text_message(to, body):
+    async def fake_send_text_message(to, body, db=None):
         sent.append((to, body))
         return {"messages": [{"id": "wamid.fake"}]}
 
