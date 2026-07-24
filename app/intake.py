@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from app.engine import NegotiationEngine, Tactic
 from app.models import Case, ChannelEnum, StateEnum, User, UserMemory
 from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, call_subagent_json
+from app.vault import VaultReader
 
 CONFIRMATION_WORDS = {
     "evet",
@@ -72,7 +73,7 @@ def _create_case_from_fields(user: User, fields: dict) -> Case:
 
 
 def _confirm_and_create_case(
-    user: User, client: SubagentClient, tactics: list[Tactic]
+    user: User, client: SubagentClient, tactics: list[Tactic], vault_dir: str = "vault"
 ) -> IntakeResult:
     fields = (user.intake_state or {}).get("collected_fields", {})
     case = _create_case_from_fields(user, fields)
@@ -86,6 +87,7 @@ def _confirm_and_create_case(
                 "TACTICS": [t.taktik_id for t in tactics],
                 "INTEL": {},
                 "PROFILE": {},
+                "VAULT": VaultReader(vault_dir).read_for_role(SubagentRole.stratejist.value).to_dict(),
             },
         )
     except SubagentEscalated as exc:
@@ -109,12 +111,13 @@ def run_intake_turn(
     incoming_message: str,
     thread: list[dict],
     tactics: list[Tactic],
+    vault_dir: str = "vault",
 ) -> IntakeResult:
     """Run one intake turn for an inbound message from a User with no active Case."""
     state = user.intake_state or {}
 
     if state.get("awaiting_confirmation") and _is_confirmation(incoming_message):
-        return _confirm_and_create_case(user, client, tactics)
+        return _confirm_and_create_case(user, client, tactics, vault_dir)
 
     try:
         data = call_subagent_json(
@@ -125,6 +128,7 @@ def run_intake_turn(
                 "THREAD": thread,
                 "MEMORY": {m.key: m.value for m in user.memory},
                 "COLLECTED_FIELDS": state.get("collected_fields", {}),
+                "VAULT": VaultReader(vault_dir).read_for_role(SubagentRole.intake.value).to_dict(),
             },
         )
     except SubagentEscalated as exc:

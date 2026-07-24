@@ -14,9 +14,11 @@ class ScriptedClient:
     def __init__(self, responses: dict[SubagentRole, list[str]]):
         self._responses = {role: list(v) for role, v in responses.items()}
         self.calls: list[SubagentRole] = []
+        self.payloads: dict[SubagentRole, list[dict]] = {}
 
     def complete(self, role, system_prompt, payload):
         self.calls.append(role)
+        self.payloads.setdefault(role, []).append(payload)
         queue = self._responses.get(role, [])
         assert queue, f"unexpected extra call to {role.value}"
         return queue.pop(0)
@@ -242,3 +244,40 @@ def test_run_intake_turn_non_confirmation_reply_continues_conversation(make_user
     assert result.status == "reply"
     assert user.intake_state["collected_fields"]["hedef_kira"] == 95000
     assert user.intake_state["awaiting_confirmation"] is False
+
+
+def test_run_intake_turn_includes_vault_block(make_user):
+    user = make_user()
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.intake: [
+                _intake_response("Hangi bölgede?", {}, ["hedef_kira", "ev_sahibi_iletisim"], False)
+            ]
+        }
+    )
+
+    run_intake_turn(user, client, "merhaba", [], tactics, vault_dir=VAULT_DIR)
+
+    payload = client.payloads[SubagentRole.intake][0]
+    assert "VAULT" in payload
+    assert payload["VAULT"] == {"documents": [], "warnings": []}  # 07/08 are placeholders until PR-B/D
+
+
+def test_run_intake_turn_confirmation_includes_vault_block_for_stratejist(make_user):
+    user = make_user()
+    user.intake_state = {
+        "collected_fields": {"hedef_kira": 90000, "ev_sahibi_iletisim": "+9715000000"},
+        "missing_fields": [],
+        "ready": True,
+        "awaiting_confirmation": True,
+    }
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient({SubagentRole.stratejist: [_stratejist_response()]})
+
+    run_intake_turn(user, client, "evet", [], tactics, vault_dir=VAULT_DIR)
+
+    payload = client.payloads[SubagentRole.stratejist][0]
+    assert "VAULT" in payload
+    vault_paths = {d["path"] for d in payload["VAULT"]["documents"]}
+    assert "01-Playbooks/kira-bae.md" in vault_paths

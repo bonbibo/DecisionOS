@@ -22,9 +22,15 @@ from dataclasses import dataclass
 from app.engine import InvalidTransition, NegotiationEngine, Tactic
 from app.models import Case, StateEnum
 from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, Verdict, call_subagent_json
+from app.vault import VaultReader
 
 MAX_REVISIONS = 2
 MAX_REJECT_REPLANS = 1
+
+
+def _vault_block(role: SubagentRole, vault_dir: str = "vault") -> dict:
+    """Everything vault/_manifest.md assigns `role`, ready to embed in its payload."""
+    return VaultReader(vault_dir).read_for_role(role.value).to_dict()
 
 
 @dataclass
@@ -59,6 +65,7 @@ def _draft_and_review(
     tactic: Tactic | None,
     thread: list[dict],
     analysis: dict,
+    vault_dir: str = "vault",
 ) -> TurnResult:
     """Run the Yazıcı <-> Kritik loop for one plan. Returns status "approved",
     "rejected" (caller should re-plan), or "escalated"."""
@@ -75,6 +82,7 @@ def _draft_and_review(
                     "THREAD": thread,
                     "ANALYSIS": analysis,
                     "REVISION_NOTE": revision_note,
+                    "VAULT": _vault_block(SubagentRole.yazici, vault_dir),
                 },
             )
         except SubagentEscalated as exc:
@@ -84,7 +92,12 @@ def _draft_and_review(
             verdict_data = call_subagent_json(
                 client,
                 SubagentRole.kritik,
-                {"DRAFT": draft, "TACTIC": tactic.body if tactic else None, "PLAN": plan},
+                {
+                    "DRAFT": draft,
+                    "TACTIC": tactic.body if tactic else None,
+                    "PLAN": plan,
+                    "VAULT": _vault_block(SubagentRole.kritik, vault_dir),
+                },
             )
         except SubagentEscalated as exc:
             return TurnResult(
@@ -122,6 +135,7 @@ def run_turn(
     tactics: list[Tactic],
     profiles: list[dict] | None = None,
     intel: dict | None = None,
+    vault_dir: str = "vault",
 ) -> TurnResult:
     """Run one negotiation turn for an incoming counterparty message.
 
@@ -140,6 +154,7 @@ def run_turn(
                 "THREAD": thread,
                 "PROFILES": profiles or [],
                 "STATE": {"asama": case.state.value},
+                "VAULT": _vault_block(SubagentRole.analist, vault_dir),
             },
         )
     except SubagentEscalated as exc:
@@ -167,6 +182,7 @@ def run_turn(
                         "TACTICS": [t.taktik_id for t in tactics],
                         "INTEL": intel or {},
                         "PROFILE": analysis,
+                        "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
                     },
                 )
             except SubagentEscalated as exc:
@@ -176,7 +192,7 @@ def run_turn(
             case.plan = plan
 
         tactic = _select_tactic(plan, tactics)
-        result = _draft_and_review(client, case, plan, tactic, thread, analysis)
+        result = _draft_and_review(client, case, plan, tactic, thread, analysis, vault_dir)
 
         if result.status != "rejected":
             break

@@ -35,9 +35,11 @@ class ScriptedClient:
     def __init__(self, responses: dict[SubagentRole, list[str]]):
         self._responses = {role: list(v) for role, v in responses.items()}
         self.calls: list[SubagentRole] = []
+        self.payloads: dict[SubagentRole, list[dict]] = {}
 
     def complete(self, role, system_prompt, payload):
         self.calls.append(role)
+        self.payloads.setdefault(role, []).append(payload)
         queue = self._responses.get(role, [])
         assert queue, f"unexpected extra call to {role.value}"
         return queue.pop(0)
@@ -215,3 +217,32 @@ def test_run_turn_illegal_recommended_state_escalates(new_case):
     assert result.status == "escalated"
     assert new_case.state is StateEnum.discovery
     assert new_case.escalated is True
+
+
+def test_run_turn_includes_vault_block_for_every_subagent_call(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [ANALIST_OK],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "merhaba", thread=[], tactics=tactics, vault_dir=str(VAULT_DIR))
+
+    for role in (SubagentRole.analist, SubagentRole.stratejist, SubagentRole.yazici, SubagentRole.kritik):
+        payload = client.payloads[role][0]
+        assert "VAULT" in payload
+        assert "documents" in payload["VAULT"]
+        assert "warnings" in payload["VAULT"]
+
+    # yazici's manifest entry is scoped to taktikler/ only, not the whole playbook.
+    yazici_paths = {d["path"] for d in client.payloads[SubagentRole.yazici][0]["VAULT"]["documents"]}
+    assert yazici_paths == {
+        "01-Playbooks/taktikler/TK-001-rakip-teklif.md",
+        "01-Playbooks/taktikler/TK-002-kosul-takasi.md",
+        "01-Playbooks/taktikler/TK-003-sessizlik-deadline.md",
+    }

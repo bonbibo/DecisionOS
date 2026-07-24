@@ -15,7 +15,8 @@ app/
   database.py          SQLAlchemy engine/session, declarative Base
   models.py            User, UserMemory, Case, Message, Offer, LLMCall,
                           OutboundQueueItem, StateEnum + related enums
-  engine.py             NegotiationEngine: the state machine + vault loaders
+  vault.py               VaultReader: the single gateway onto vault/ (manifest-driven)
+  engine.py             NegotiationEngine: the state machine + legacy vault loaders
   intake.py              5th subagent: onboarding conversation before a Case exists
   metrics.py             Dashboard generation from vault frontmatter
   subagents.py            Subagent prompt loading + JSON response contract
@@ -31,8 +32,9 @@ alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
   update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
-tests/                   pytest suite (state machine, vault loaders, subagents,
-                            orchestrator, LLM client, intake, webhook + review flow)
+tests/                   pytest suite (state machine, VaultReader + legacy vault
+                            loaders, subagents, orchestrator, LLM client, intake,
+                            webhook + review flow)
 ```
 
 ## State machine
@@ -110,13 +112,34 @@ alembic upgrade head
 alembic downgrade -1
 ```
 
-## Vault (playbooks & tactics)
+## Vault-driven engine (`app/vault.py`)
 
-`vault/` is an Obsidian vault that doubles as the engine's live tactic
-library — updating a playbook is a `git push`, not a code change:
+Vault change = behavior change, no deploy: **`VaultReader` is the single
+gateway** for reading `vault/` content — no subagent or module opens a vault
+file directly. Which folders each role may see is declared in
+`vault/_manifest.md` (`roles: {role: [folder, ...]}`), not hardcoded in
+Python:
+
+```python
+from app.vault import VaultReader
+
+context = VaultReader("vault").read_for_role("stratejist")
+# context.documents: [VaultDocument(path, frontmatter: dict | None, body: str), ...]
+# context.warnings: e.g. "unknown role", "manifest path not found" — never a crash
+```
+
+`app.orchestrator.run_turn` and `app.intake.run_intake_turn` call this before
+*every* subagent request and attach the result as a `"VAULT"` key on that
+role's payload — so a vault edit changes what the next turn's Stratejist/
+Yazıcı/Kritik/Analist/Intake call sees, with no code change and no restart
+(hot-reload: every call re-reads from disk, no caching in V1). Frontmatter'd
+notes parse to a `dict`; frontmatter-less notes carry `frontmatter=None` and
+the whole file as `body`. Document order is always path-sorted, for
+consistent prompt-cache behavior across turns.
 
 ```
 vault/
+  _manifest.md               role -> folder mapping (edit this to add a folder for a role)
   01-Playbooks/
     kira-bae.md              playbook note (anchor strategy, concession ladder, red lines)
     taktikler/
@@ -127,8 +150,20 @@ vault/
     profiller.md              counterparty archetypes (## <id> — <name> sections, no frontmatter)
   05-Metrikler/
     dashboard.md               win-rate / tactic-score dashboard — regenerated, not hand-edited
+  06-Kararlar/                architecture decision records (placeholder — content lands in a later PR)
+  07-Fiyatlama/                pricing model per vertical (placeholder — content lands in a later PR)
+  08-Musteri-Profilleri/       customer segments (placeholder — content lands in a later PR)
   _sablonlar/                 templates for new tactic / retro notes
 ```
+
+The system never writes back to the vault (except the already-generated
+`05-Metrikler/dashboard.md`) — a Kütüphaneci-authored proposal file + human
+merge is the only path for the vault to change.
+
+`load_playbooks()`/`load_profiles()` in `app/engine.py` are now thin,
+`DeprecationWarning`-emitting wrappers over `VaultReader` (kept for
+call-site compatibility); `load_tactics()`/`load_retros()` still read
+directly for now — natural follow-ups to migrate onto `VaultReader` too.
 
 Each tactic note has YAML frontmatter (`taktik_id`, `dikey`, `asama`,
 `durum`, `basari_orani`, `risk`, ...). `app/engine.py` parses these directly:

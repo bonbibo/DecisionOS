@@ -7,13 +7,13 @@ or either side walks away).
 
 import enum
 import re
+import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-import yaml
-
 from app.models import ActorEnum, Case, Message, MessageKindEnum, Offer, StateEnum, User
+from app.vault import VaultReader, parse_frontmatter
 
 # Allowed target states for each current state.
 TRANSITIONS: dict[StateEnum, set[StateEnum]] = {
@@ -46,17 +46,6 @@ EVENT_TARGET_STATE: dict[NegotiationEvent, StateEnum] = {
 }
 
 
-_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?\n)---\s*\n?(.*)", re.DOTALL)
-
-
-def _parse_frontmatter(text: str) -> tuple[dict, str]:
-    """Split a vault note into its YAML frontmatter dict and markdown body."""
-    match = _FRONTMATTER_RE.match(text)
-    if not match:
-        return {}, text
-    raw_meta, body = match.groups()
-    meta = yaml.safe_load(raw_meta) or {}
-    return meta, body.strip()
 
 
 @dataclass
@@ -98,7 +87,7 @@ def load_tactics(vault_dir: Path | str = "vault") -> list[Tactic]:
     taktikler_dir = Path(vault_dir) / "01-Playbooks" / "taktikler"
     tactics = []
     for path in sorted(taktikler_dir.glob("*.md")):
-        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
         if "taktik_id" not in meta:
             continue
         tactics.append(
@@ -121,11 +110,20 @@ def load_tactics(vault_dir: Path | str = "vault") -> list[Tactic]:
 
 
 def load_playbooks(vault_dir: Path | str = "vault") -> list[Playbook]:
-    """Parse every playbook note directly under vault/01-Playbooks/ (excluding taktikler/)."""
-    playbooks_dir = Path(vault_dir) / "01-Playbooks"
+    """Parse every playbook note directly under vault/01-Playbooks/ (excluding taktikler/).
+
+    Deprecated: thin wrapper over app.vault.VaultReader, kept for backward
+    compatibility. New code should read VaultReader().read_folder(...) directly.
+    """
+    warnings.warn(
+        "load_playbooks() is deprecated; use app.vault.VaultReader instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    context = VaultReader(vault_dir).read_folder("01-Playbooks", recursive=False)
     playbooks = []
-    for path in sorted(playbooks_dir.glob("*.md")):
-        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+    for doc in context.documents:
+        meta = doc.frontmatter or {}
         if "playbook_id" not in meta:
             continue
         playbooks.append(
@@ -134,8 +132,8 @@ def load_playbooks(vault_dir: Path | str = "vault") -> list[Playbook]:
                 dikey=meta["dikey"],
                 durum=meta["durum"],
                 guncelleme=str(meta.get("guncelleme", "")),
-                body=body,
-                source_path=path,
+                body=doc.body,
+                source_path=Path(vault_dir) / doc.path,
             )
         )
     return playbooks
@@ -167,11 +165,20 @@ class CounterpartyProfile:
 
 
 def load_profiles(vault_dir: Path | str = "vault") -> list[CounterpartyProfile]:
-    """Parse counterparty archetype sections from vault/04-Karsi-Taraf/*.md."""
-    profiles_dir = Path(vault_dir) / "04-Karsi-Taraf"
+    """Parse counterparty archetype sections from vault/04-Karsi-Taraf/*.md.
+
+    Deprecated: thin wrapper over app.vault.VaultReader, kept for backward
+    compatibility. New code should read VaultReader().read_folder(...) directly.
+    """
+    warnings.warn(
+        "load_profiles() is deprecated; use app.vault.VaultReader instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    context = VaultReader(vault_dir).read_folder("04-Karsi-Taraf", recursive=False)
     profiles = []
-    for path in sorted(profiles_dir.glob("*.md")):
-        text = path.read_text(encoding="utf-8")
+    for doc in context.documents:
+        text = doc.body
         headings = list(_PROFILE_HEADING_RE.finditer(text))
         for i, heading in enumerate(headings):
             start = heading.end()
@@ -181,7 +188,7 @@ def load_profiles(vault_dir: Path | str = "vault") -> list[CounterpartyProfile]:
                     profile_id=heading.group(1),
                     ad=heading.group(2).strip(),
                     body=text[start:end].strip(),
-                    source_path=path,
+                    source_path=Path(vault_dir) / doc.path,
                 )
             )
     return profiles
@@ -209,7 +216,7 @@ def load_retros(vault_dir: Path | str = "vault") -> list[Retro]:
     retros_dir = Path(vault_dir) / "03-Retros"
     retros = []
     for path in sorted(retros_dir.glob("*.md")):
-        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
         if "retro_id" not in meta:
             continue
         retros.append(
