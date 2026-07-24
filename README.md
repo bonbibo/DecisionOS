@@ -32,13 +32,19 @@ app/
   admin/
     __init__.py            /admin operator panel (Basic auth via REVIEW_TOKEN)
     templates/              Jinja templates for the panel
+  intel/
+    __init__.py             Listing dataclass, Adapter protocol
+    property_finder.py       PropertyFinderAdapter (stub fetch, injectable fetch_fn)
+    bayut.py                  BayutAdapter (same shape)
+    aggregate.py               run_intel() -> vault/09-Piyasa-Verisi/<dikey>.md
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
   update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
+  run_intel.py               Regenerates vault/09-Piyasa-Verisi/*.md (daily cron)
 tests/                   pytest suite (state machine, VaultReader + legacy vault
                             loaders, subagents, orchestrator, LLM client, intake,
-                            webhook + review flow, web channel + admin panel)
+                            webhook + review flow, web channel + admin panel, market intel)
 ```
 
 ## State machine
@@ -163,6 +169,8 @@ vault/
   08-Musteri-Profilleri/
     segmentler.md               customer segments (S1/S2/S3, no frontmatter — our own customer,
                                    not the counterparty; see 04-Karsi-Taraf for that)
+  09-Piyasa-Verisi/           generated (not hand-edited) — see scripts/run_intel.py
+    kira-bae.md                comparable-listings summary for Stratejist's INTEL
   _sablonlar/                 templates for new tactic / retro notes
 ```
 
@@ -249,6 +257,41 @@ score, regenerate it with:
 ```bash
 python scripts/update_metrics.py
 ```
+
+### Market intel (`app/intel/`, `vault/09-Piyasa-Verisi/`)
+
+`vault/09-Piyasa-Verisi/<dikey>.md` is the third "system-generated, not
+hand-edited" vault folder (alongside `05-Metrikler/dashboard.md`) — a
+per-vertical comparable-listings summary that rides along in Stratejist's
+`INTEL` payload key automatically, no caller change required:
+
+```bash
+python scripts/run_intel.py   # regenerates every active vertical's note
+```
+
+- `app/intel/property_finder.py` / `app/intel/bayut.py`: each adapter's real
+  fetch (Crawlee + the Playwright already provisioned in this environment)
+  is a documented stub — the live CSS selectors were never verified against
+  the real sites (see `docs/MASTER-SPEC-v3.md` Package F). Both adapters take
+  an injectable `fetch_fn` (same seam pattern as
+  `AnthropicSubagentClient(client=...)`), which is what tests and any real
+  integration use; the default stub logs a warning and returns no listings
+  rather than guessing at selectors that could silently scrape garbage or
+  break ToS.
+- `app/intel/aggregate.py::run_intel()`: for every vault/07-Fiyatlama/*.md
+  vertical with `durum: aktif`, gathers listings from both adapters,
+  computes `ortalama/min/max kira` + `ilan_sayisi`, and writes
+  `vault/09-Piyasa-Verisi/<dikey>.md`. A run that finds no listings (e.g.
+  the stub) **skips writing** rather than zeroing out a previously-good
+  note — see `_aggregate`'s `None` return.
+- `app.orchestrator._get_intel(case, vault_dir)` (mirrored in
+  `app.intake._get_intel` for the intake-confirmation Stratejist call) reads
+  the active note for the case's vertical and returns its frontmatter, or
+  `{}` if there isn't one yet. `run_turn`'s `intel` parameter still exists
+  as an explicit override (mainly for tests); its default (`None`) now means
+  "look it up from the vault" instead of always `{}`.
+- Intended to run daily via a Railway cron job — not wired up in this repo
+  (deploy-platform config, not code); see `docs/PROGRESS.md`.
 
 ## Subagents (Stratejist / Yazıcı / Kritik / Analist / Intake)
 

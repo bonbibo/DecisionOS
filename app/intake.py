@@ -26,6 +26,19 @@ def _vault_block(role: SubagentRole, vault_dir: str = "vault") -> dict:
     context = VaultReader(vault_dir).read_for_role(role.value)
     return context.exclude_inactive_decisions().to_dict()
 
+
+def _get_intel(case: Case, vault_dir: str = "vault") -> dict:
+    """Mirrors app.orchestrator._get_intel — auto-populated market intel for
+    the case's vertical (vault/09-Piyasa-Verisi/<dikey>.md), {} if none/not aktif."""
+    if not case.vertical:
+        return {}
+    context = VaultReader(vault_dir).read_folder("09-Piyasa-Verisi", recursive=False)
+    for doc in context.documents:
+        frontmatter = doc.frontmatter or {}
+        if frontmatter.get("dikey") == case.vertical and frontmatter.get("durum") == "aktif":
+            return frontmatter
+    return {}
+
 CONFIRMATION_WORDS = {
     "evet",
     "onaylıyorum",
@@ -129,7 +142,7 @@ def _confirm_and_create_case(
             {
                 "CASE": {"vertical": case.vertical, "state": case.state.value, "floor": case.min_acceptable_price},
                 "TACTICS": [t.taktik_id for t in tactics],
-                "INTEL": {},
+                "INTEL": _get_intel(case, vault_dir),
                 "PROFILE": {},
                 "SEGMENT": next((m.value for m in user.memory if m.key == "segment"), None),
                 "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),

@@ -43,6 +43,20 @@ def _get_segment(case: Case) -> str | None:
     return next((m.value for m in case.user.memory if m.key == "segment"), None)
 
 
+def _get_intel(case: Case, vault_dir: str = "vault") -> dict:
+    """Auto-populated market intel for the case's vertical (vault/09-Piyasa-Verisi/<dikey>.md,
+    written by scripts/run_intel.py — see app.intel.aggregate) — {} if there's no
+    vertical, no note, or the note isn't `durum: aktif`."""
+    if not case.vertical:
+        return {}
+    context = VaultReader(vault_dir).read_folder("09-Piyasa-Verisi", recursive=False)
+    for doc in context.documents:
+        frontmatter = doc.frontmatter or {}
+        if frontmatter.get("dikey") == case.vertical and frontmatter.get("durum") == "aktif":
+            return frontmatter
+    return {}
+
+
 @dataclass
 class TurnResult:
     status: str  # "approved" | "escalated"
@@ -200,7 +214,7 @@ def run_turn(
                             "floor": case.min_acceptable_price,
                         },
                         "TACTICS": [t.taktik_id for t in tactics],
-                        "INTEL": intel or {},
+                        "INTEL": intel if intel is not None else _get_intel(case, vault_dir),
                         "PROFILE": analysis,
                         "SEGMENT": _get_segment(case),
                         "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
