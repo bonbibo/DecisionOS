@@ -53,6 +53,7 @@ scripts/
   daily_report.py             Writes reports/YYYY-MM-DD.md (+ emails OPS_EMAIL)
 docs/
   RUNBOOK.md                Deploy/rollback/incident-response reference
+  PROGRESS.md                MASTER-SPEC-v3 (F-K) final report — İNSAN GEREKLİ list, setup order
 tests/                   pytest suite (state machine, VaultReader + legacy vault
                             loaders, subagents, orchestrator, LLM client, intake,
                             webhook + review flow, web channel + admin panel, market intel)
