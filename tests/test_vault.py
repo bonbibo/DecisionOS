@@ -31,8 +31,11 @@ def test_read_for_role_stratejist_gets_playbook_and_taktikler():
 
 def test_read_for_role_analist_gets_karsi_taraf():
     ctx = VaultReader(VAULT_DIR).read_for_role("analist")
-    assert [d.path for d in ctx.documents] == ["04-Karsi-Taraf/profiller.md"]
-    assert ctx.documents[0].frontmatter is None  # profiller.md has no frontmatter
+    paths = [d.path for d in ctx.documents]
+    # 08-Musteri-Profilleri has real content as of PR-D (segmentler.md).
+    assert paths == ["04-Karsi-Taraf/profiller.md", "08-Musteri-Profilleri/segmentler.md"]
+    profiller = next(d for d in ctx.documents if d.path == "04-Karsi-Taraf/profiller.md")
+    assert profiller.frontmatter is None  # profiller.md has no frontmatter
 
 
 def test_read_for_role_unknown_role_returns_empty_context_with_warning():

@@ -34,6 +34,14 @@ def _vault_block(role: SubagentRole, vault_dir: str = "vault") -> dict:
     return context.exclude_inactive_decisions().to_dict()
 
 
+def _get_segment(case: Case) -> str | None:
+    """The case's own customer segment (S1/S2/S3, from vault/08-Musteri-Profilleri/segmentler.md
+    via UserMemory) — None if the case has no linked user or the segment isn't known yet."""
+    if not case.user:
+        return None
+    return next((m.value for m in case.user.memory if m.key == "segment"), None)
+
+
 @dataclass
 class TurnResult:
     status: str  # "approved" | "escalated"
@@ -183,6 +191,7 @@ def run_turn(
                         "TACTICS": [t.taktik_id for t in tactics],
                         "INTEL": intel or {},
                         "PROFILE": analysis,
+                        "SEGMENT": _get_segment(case),
                         "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
                     },
                 )

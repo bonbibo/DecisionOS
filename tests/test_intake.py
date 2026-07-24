@@ -267,8 +267,12 @@ def test_run_intake_turn_includes_vault_block(make_user):
     payload = client.payloads[SubagentRole.intake][0]
     assert "VAULT" in payload
     vault_paths = {d["path"] for d in payload["VAULT"]["documents"]}
-    # 07-Fiyatlama has real content as of PR-B; 08-Musteri-Profilleri is still a placeholder.
-    assert vault_paths == {"07-Fiyatlama/arac-bae.md", "07-Fiyatlama/kira-bae.md"}
+    # 07-Fiyatlama (PR-B) and 08-Musteri-Profilleri (PR-D) both have real content now.
+    assert vault_paths == {
+        "07-Fiyatlama/arac-bae.md",
+        "07-Fiyatlama/kira-bae.md",
+        "08-Musteri-Profilleri/segmentler.md",
+    }
     assert payload["VAULT"]["warnings"] == []
 
 

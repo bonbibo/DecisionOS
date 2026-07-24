@@ -156,7 +156,9 @@ vault/
   07-Fiyatlama/
     kira-bae.md                pricing model (`durum: aktif`) — success fee % / min fee / flat alternative
     arac-bae.md                second-vertical demo pricing (`durum: demo`) — not offered to real customers
-  08-Musteri-Profilleri/       customer segments (placeholder — content lands in a later PR)
+  08-Musteri-Profilleri/
+    segmentler.md               customer segments (S1/S2/S3, no frontmatter — our own customer,
+                                   not the counterparty; see 04-Karsi-Taraf for that)
   _sablonlar/                 templates for new tactic / retro notes
 ```
 
@@ -182,6 +184,24 @@ note that isn't `durum: aktif` before it reaches a subagent payload — a
 `taslak`/`iptal`/`gozden-gecirilecek` decision is vault history, not live
 context. Every other folder is passed through untouched; this filter is
 `06-Kararlar/`-specific, not a generic `durum` filter.
+
+### Customer segments (`08-Musteri-Profilleri/`)
+
+Not to be confused with `04-Karsi-Taraf/`'s A1/A2/A3 (the *counterparty*
+archetypes) — `08-Musteri-Profilleri/segmentler.md`'s S1/S2/S3 describe
+*our own customer* (new expat / established expat / corporate, each with
+different negotiation calibration rules). `app/prompts/analist.md` is
+explicit about not conflating the two, since Analist's manifest scope
+includes both folders.
+
+- Intake may write `memory_updates.segment` ("S1"/"S2"/"S3") once it's
+  confident — never a guess; the prompt tells it to leave the key out
+  entirely rather than write an uncertain segment.
+- `app.orchestrator._get_segment(case)` / the equivalent inline lookup in
+  `app.intake._confirm_and_create_case` reads `segment` back out of
+  `UserMemory` and passes it to Stratejist as `SEGMENT` — `None` if the
+  case has no linked user or the segment isn't known yet, in which case
+  Stratejist is told not to assume one and plan from `CASE`/`PROFILE` alone.
 
 Each tactic note has YAML frontmatter (`taktik_id`, `dikey`, `asama`,
 `durum`, `basari_orani`, `risk`, ...). `app/engine.py` parses these directly:

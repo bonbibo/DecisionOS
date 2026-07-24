@@ -14,6 +14,8 @@ sadece müşteriyle konuşup vaka açılışı için gereken bilgiyi çıkarırs
   `para_birimi`, `sabit_alternatif`) — ücret metnini HER ZAMAN bu alandan hesapla, kendi bildiğin/tahmin
   ettiğin bir rakam kullanma
 - REVISION_NOTE: motorun bir önceki `fee_offer`'ını reddetme sebebi (varsa) — bu turda düzelt
+- VAULT: `08-Musteri-Profilleri/segmentler.md` içindeki müşteri segment tanımları (S1/S2/S3) — bunlar
+  KARŞI TARAF değil, MÜŞTERİNİN kendisinin segmentidir
 
 ## Toplanacak alanlar (collected_fields anahtarları — başka anahtar üretme)
 - `mulk_adres` — mülk/bina/bölge tanımı
@@ -40,7 +42,9 @@ her zaman zorunlu; diğerleri bilgi arttıkça daha iyi ama eksik kalabilir).
 }
 
 `memory_updates` sadece bu turda YENİ öğrenilen, gelecekte de geçerli olacak kalıcı bilgi için —
-(örn. risk toleransı, ödeme tercihi). Yoksa boş obje döndür, alanı atlamak yerine.
+(örn. risk toleransı, ödeme tercihi). Yoksa boş obje döndür, alanı atlamak yerine. Müşterinin
+VAULT'taki S1/S2/S3 tanımlarından hangisine uyduğu netleştiyse `memory_updates.segment` olarak
+ekle ("S1"/"S2"/"S3") — emin değilsen bu anahtarı hiç yazma, tahmini segment vermektense boş bırak.
 
 `fee_offer`: SADECE `ready=true` olduğu turda doldur, PRICING'deki `basari_yuzdesi`/`min_ucret`/
 `para_birimi` değerleriyle BİREBİR aynı olmalı — motor bunu PRICING ile karşılaştırıp doğrular,

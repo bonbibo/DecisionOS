@@ -131,6 +131,7 @@ def _confirm_and_create_case(
                 "TACTICS": [t.taktik_id for t in tactics],
                 "INTEL": {},
                 "PROFILE": {},
+                "SEGMENT": next((m.value for m in user.memory if m.key == "segment"), None),
                 "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
             },
         )
