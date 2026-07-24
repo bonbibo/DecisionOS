@@ -20,8 +20,8 @@ top of that.
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from app.engine import InvalidTransition, NegotiationEngine, Tactic
-from app.models import Case, StateEnum
+from app.engine import InvalidTransition, NegotiationEngine, Tactic, record_offer
+from app.models import ActorEnum, Case, OutcomeEnum, StateEnum
 from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, Verdict, call_subagent_json
 from app.vault import VaultReader
 
@@ -67,6 +67,14 @@ class TurnResult:
 
 
 def _apply_recommended_state(engine: NegotiationEngine, recommended_state: str) -> None:
+    """Also sets Case.outcome when Analist distinguishes a real close (won)
+    from a walk-away (walked) — see app.payments, Package G. Only set on the
+    actual "walk"/"close" signals; every other state leaves outcome alone."""
+    if recommended_state == "walk":
+        engine.case.outcome = OutcomeEnum.walked
+    elif recommended_state == "close":
+        engine.case.outcome = OutcomeEnum.won
+
     target = StateEnum.close if recommended_state == "walk" else StateEnum(recommended_state)
     if target is engine.case.state:
         return
@@ -192,6 +200,10 @@ def run_turn(
     except SubagentEscalated as exc:
         return _escalate(case, TurnResult(status="escalated", escalation_reason=str(exc)), incoming_message)
 
+    counter_offer = analysis.get("counter_offer")
+    if isinstance(counter_offer, (int, float)):
+        record_offer(case, actor=ActorEnum.counterparty, price=counter_offer)
+
     try:
         _apply_recommended_state(engine, analysis["recommended_state"])
     except (ValueError, InvalidTransition) as exc:
@@ -242,6 +254,11 @@ def run_turn(
 
     if result.status == "escalated":
         return _escalate(case, result, incoming_message)
+
+    offer_made = result.draft.get("offer_made") if result.draft else None
+    if isinstance(offer_made, (int, float)):
+        record_offer(case, actor=ActorEnum.us, price=offer_made)
+
     case.escalated = False
     case.escalation_reason = None
     return result

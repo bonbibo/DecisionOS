@@ -45,6 +45,7 @@ from app.models import (
     User,
 )
 from app.orchestrator import run_turn, status_message_for
+from app.payments import handle_turn_outcome
 from app.schemas import (
     CaseTimelineRead,
     WebChatRequest,
@@ -120,6 +121,7 @@ def _handle_negotiation_message(db: Session, case: Case, user: User, text: str) 
 
     client = AnthropicSubagentClient(case_id=case.id, db=db, user_id=user.id)
     result = run_turn(case, client, incoming_message=text, thread=thread, tactics=tactics)
+    handle_turn_outcome(case, vault_dir=VAULT_DIR)
 
     if result.status == "approved" and result.draft:
         db.add(

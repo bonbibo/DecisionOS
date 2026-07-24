@@ -181,7 +181,10 @@ def test_review_endpoints_require_bearer_token(api_client, make_case, db_session
 
 
 def test_review_approve_sends_and_marks_sent(api_client, make_case, db_session, monkeypatch):
-    case = make_case()
+    # is_demo=True exempts the case from Package G's pre-auth guard (see
+    # app.payments.require_pre_auth) — this test is about the send/mark-sent
+    # mechanics, not payments.
+    case = make_case(is_demo=True)
     item = OutboundQueueItem(
         case=case,
         channel=ChannelEnum.whatsapp,

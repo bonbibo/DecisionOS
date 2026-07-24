@@ -43,6 +43,7 @@ from app.models import (
     User,
 )
 from app.orchestrator import TurnResult, run_turn, status_message_for
+from app.payments import handle_turn_outcome
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -145,6 +146,7 @@ def _handle_negotiation_message(db: Session, case: Case, sender: str, text: str,
 
     client = AnthropicSubagentClient(case_id=case.id, db=db, user_id=case.user_id)
     result = run_turn(case, client, incoming_message=text, thread=thread, tactics=tactics, profiles=profiles)
+    handle_turn_outcome(case, vault_dir=VAULT_DIR)
 
     if result.status == "approved" and result.draft:
         db.add(

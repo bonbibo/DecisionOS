@@ -9,6 +9,7 @@ from app.channels import email, web, whatsapp
 from app.config import get_settings
 from app.database import get_db
 from app.models import Case
+from app.payments import router as payments_router
 from app.review import router as review_router
 from app.schemas import CaseCreate, CaseRead
 
@@ -22,6 +23,7 @@ app.include_router(email.router)
 app.include_router(web.router)
 app.include_router(review_router)
 app.include_router(admin_router)
+app.include_router(payments_router)
 
 
 @app.get("/health")

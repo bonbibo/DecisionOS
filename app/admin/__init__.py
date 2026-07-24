@@ -26,8 +26,15 @@ from app.config import get_settings
 from app.database import get_db
 from app.engine import load_tactics
 from app.llm import AnthropicSubagentClient
-from app.models import AudienceEnum, Case, ChannelEnum, LLMCall, OutboundQueueItem, OutboundStatusEnum
+from app.models import AudienceEnum, Case, ChannelEnum, LLMCall, OutboundQueueItem, OutboundStatusEnum, Payment
 from app.orchestrator import resume_after_escalation, status_message_for
+from app.payments import (
+    PreAuthRequiredError,
+    cancel_for_walked_case,
+    capture_for_won_case,
+    handle_turn_outcome,
+    require_pre_auth,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -82,6 +89,11 @@ async def approve(msg_id: uuid.UUID, operator: str = Depends(require_admin_auth)
         raise HTTPException(status_code=409, detail=f"item is already '{item.status.value}'")
     if item.channel.value != "whatsapp":
         raise HTTPException(status_code=501, detail=f"sending for channel '{item.channel.value}' isn't wired up yet")
+    if item.audience is AudienceEnum.counterparty:
+        try:
+            require_pre_auth(item.case, vault_dir=VAULT_DIR)
+        except PreAuthRequiredError as exc:
+            raise HTTPException(status_code=409, detail="payment pre-authorization required") from exc
 
     await whatsapp.send_text_message(item.recipient, item.message)
 
@@ -165,6 +177,7 @@ def answer_escalation(
     result = resume_after_escalation(
         case, client, answer, thread, tactics, vault_dir=VAULT_DIR, answered_by=operator
     )
+    handle_turn_outcome(case, vault_dir=VAULT_DIR)
 
     if result.status == "approved" and result.draft:
         db.add(
@@ -235,3 +248,36 @@ def costs(request: Request, operator: str = Depends(require_admin_auth), db: Ses
             "operator": operator,
         },
     )
+
+
+@router.get("/payments", response_class=HTMLResponse)
+def payments_list(request: Request, operator: str = Depends(require_admin_auth), db: Session = Depends(get_db)):
+    payments = db.execute(select(Payment).order_by(Payment.created_at.desc())).scalars().all()
+    return templates.TemplateResponse(request, "payments.html", {"payments": payments, "operator": operator})
+
+
+@router.post("/cases/{case_id}/payment/capture")
+def payment_capture_override(
+    case_id: uuid.UUID, operator: str = Depends(require_admin_auth), db: Session = Depends(get_db)
+):
+    """Manual operator override — for when the automatic capture_for_won_case
+    hook (called right after run_turn/resume_after_escalation) missed a case,
+    e.g. an outcome flip that happened outside a normal turn."""
+    case = _get_case(db, case_id)
+    payment = capture_for_won_case(case, vault_dir=VAULT_DIR)
+    if payment is None:
+        raise HTTPException(status_code=409, detail="nothing to capture (no pre-authorized payment)")
+    db.commit()
+    return RedirectResponse(url=f"/admin/cases/{case_id}", status_code=303)
+
+
+@router.post("/cases/{case_id}/payment/cancel")
+def payment_cancel_override(
+    case_id: uuid.UUID, operator: str = Depends(require_admin_auth), db: Session = Depends(get_db)
+):
+    case = _get_case(db, case_id)
+    payment = cancel_for_walked_case(case)
+    if payment is None:
+        raise HTTPException(status_code=409, detail="nothing to cancel (no pre-authorized payment)")
+    db.commit()
+    return RedirectResponse(url=f"/admin/cases/{case_id}", status_code=303)

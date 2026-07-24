@@ -12,8 +12,10 @@ Flow (see app/prompts/intake.md for the full contract):
 
 from dataclasses import dataclass
 
+from app.config import get_settings
 from app.engine import NegotiationEngine, Tactic
 from app.models import Case, ChannelEnum, StateEnum, User, UserMemory
+from app.payments import checkout_link, create_pre_auth
 from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, call_subagent_json
 from app.vault import VaultReader
 
@@ -134,6 +136,7 @@ def _confirm_and_create_case(
 ) -> IntakeResult:
     fields = (user.intake_state or {}).get("collected_fields", {})
     case = _create_case_from_fields(user, fields)
+    stratejist_vault = _vault_block(SubagentRole.stratejist, vault_dir)
 
     try:
         plan = call_subagent_json(
@@ -145,7 +148,7 @@ def _confirm_and_create_case(
                 "INTEL": _get_intel(case, vault_dir),
                 "PROFILE": {},
                 "SEGMENT": next((m.value for m in user.memory if m.key == "segment"), None),
-                "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
+                "VAULT": stratejist_vault,
             },
         )
     except SubagentEscalated as exc:
@@ -160,6 +163,20 @@ def _confirm_and_create_case(
         "paylaşacağız. / Thanks! Your case is open — we're starting the conversation with the "
         "landlord and will keep you posted here."
     )
+
+    # Card pre-authorization (Package G) — only for priced, non-demo verticals;
+    # `create_pre_auth` just attaches Payment via the case.payment relationship,
+    # no db access needed here (caller persists case + its cascaded children).
+    pricing = _select_pricing(stratejist_vault["documents"], case.vertical) if case.vertical else None
+    if pricing is not None:
+        payment = create_pre_auth(case, pricing)
+        link = checkout_link(payment, get_settings().public_base_url)
+        reply += (
+            f" Devam etmeden önce kartınızı doğrulamanız gerekiyor (ücret SADECE kazandırırsak, kapanışta "
+            f"tahsil edilir): {link} / Before we continue, please verify a card (you're only charged if "
+            f"we actually save you money, at closing): {link}"
+        )
+
     return IntakeResult(status="case_created", case=case, reply=reply)
 
 

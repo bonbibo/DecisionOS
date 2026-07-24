@@ -13,6 +13,24 @@
 </p>
 {% if case.escalation_reason %}<p><strong>Eskalasyon nedeni:</strong> {{ case.escalation_reason }}</p>{% endif %}
 
+{% if case.payment %}
+<h2>Ödeme</h2>
+<p>
+  Durum: <strong>{{ case.payment.status.value }}</strong> &middot;
+  Ön-onay: {{ case.payment.amount }} {{ case.payment.currency }} &middot;
+  Tahsil edilen: {{ case.payment.captured_amount or "-" }}
+  {% if case.payment.note %}<br><em>{{ case.payment.note }}</em>{% endif %}
+</p>
+{% if case.payment.status.value == "pre_authorized" %}
+<form class="inline" method="post" action="/admin/cases/{{ case.id }}/payment/capture">
+  <button type="submit">Manuel Tahsil Et</button>
+</form>
+<form class="inline" method="post" action="/admin/cases/{{ case.id }}/payment/cancel">
+  <button type="submit">Manuel İptal Et</button>
+</form>
+{% endif %}
+{% endif %}
+
 {% if case.escalation_context and case.escalation_context.human_answers %}
 <h2>Operatör Geçmişi</h2>
 <table>

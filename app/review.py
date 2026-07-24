@@ -25,6 +25,7 @@ from app.engine import load_tactics
 from app.llm import AnthropicSubagentClient
 from app.models import AudienceEnum, Case, ChannelEnum, OutboundQueueItem, OutboundStatusEnum
 from app.orchestrator import resume_after_escalation, status_message_for
+from app.payments import PreAuthRequiredError, handle_turn_outcome, require_pre_auth
 from app.schemas import (
     CaseAnswerRequest,
     CaseRead,
@@ -70,6 +71,12 @@ async def approve(msg_id: uuid.UUID, body: ReviewApproveRequest, db: Session = D
 
     if item.channel is not ChannelEnum.whatsapp:
         raise HTTPException(status_code=501, detail=f"sending for channel '{item.channel.value}' isn't wired up yet")
+
+    if item.audience is AudienceEnum.counterparty:
+        try:
+            require_pre_auth(item.case, vault_dir=VAULT_DIR)
+        except PreAuthRequiredError as exc:
+            raise HTTPException(status_code=409, detail="payment pre-authorization required") from exc
 
     await whatsapp.send_text_message(item.recipient, item.message)
 
@@ -136,6 +143,7 @@ def answer_escalation(case_id: uuid.UUID, body: CaseAnswerRequest, db: Session =
     result = resume_after_escalation(
         case, client, body.answer, thread, tactics, vault_dir=VAULT_DIR, answered_by=body.reviewed_by
     )
+    handle_turn_outcome(case, vault_dir=VAULT_DIR)
 
     if result.status == "approved" and result.draft:
         db.add(

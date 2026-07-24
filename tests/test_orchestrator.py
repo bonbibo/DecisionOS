@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from app.engine import load_tactics
-from app.models import StateEnum
+from app.models import ActorEnum, OutcomeEnum, StateEnum
 from app.orchestrator import resume_after_escalation, run_turn
 from app.subagents import SubagentRole
 
@@ -321,3 +321,113 @@ def test_run_turn_includes_vault_block_for_every_subagent_call(new_case):
         "01-Playbooks/taktikler/TK-002-kosul-takasi.md",
         "01-Playbooks/taktikler/TK-003-sessizlik-deadline.md",
     }
+
+
+def test_apply_recommended_state_close_sets_outcome_won(new_case):
+    new_case.vertical = "kira-bae"
+    new_case.state = StateEnum.counter
+    new_case.plan = json.loads(STRATEJIST_OK)  # skip Stratejist — not the point of this test
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [json.dumps({"archetype": "A2", "recommended_state": "close"})],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "anlastik", thread=[], tactics=tactics)
+
+    assert new_case.outcome is OutcomeEnum.won
+    assert new_case.state is StateEnum.close
+
+
+def test_apply_recommended_state_walk_sets_outcome_walked(new_case):
+    new_case.vertical = "kira-bae"
+    new_case.state = StateEnum.counter
+    new_case.plan = json.loads(STRATEJIST_OK)  # skip Stratejist — not the point of this test
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [json.dumps({"archetype": "A2", "recommended_state": "walk"})],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "vazgeciyorum", thread=[], tactics=tactics)
+
+    assert new_case.outcome is OutcomeEnum.walked
+    assert new_case.state is StateEnum.close
+
+
+def test_apply_recommended_state_other_states_leave_outcome_none(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [ANALIST_OK],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "merhaba", thread=[], tactics=tactics)
+
+    assert new_case.outcome is None
+
+
+def test_run_turn_records_counterparty_offer_from_analist(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [json.dumps({"archetype": "A2", "recommended_state": "anchoring", "counter_offer": 105000})],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "105000 istiyorum", thread=[], tactics=tactics)
+
+    offers = [o for o in new_case.offers if o.actor == ActorEnum.counterparty]
+    assert len(offers) == 1
+    assert offers[0].price == 105000
+
+
+def test_run_turn_records_our_offer_from_approved_draft(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [ANALIST_OK],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [json.dumps({"message": "hello", "tactic_used": "TK-001", "offer_made": 92000})],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "merhaba", thread=[], tactics=tactics)
+
+    offers = [o for o in new_case.offers if o.actor == ActorEnum.us]
+    assert len(offers) == 1
+    assert offers[0].price == 92000
+
+
+def test_run_turn_no_offer_recorded_when_offer_fields_absent_or_null(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [ANALIST_OK],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "merhaba", thread=[], tactics=tactics)
+
+    assert new_case.offers == []

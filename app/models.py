@@ -69,6 +69,22 @@ class AudienceEnum(str, enum.Enum):
     client = "client"
 
 
+class OutcomeEnum(str, enum.Enum):
+    """Set on Case once Analist's recommended_state distinguishes a real
+    close from a walk-away — see app.orchestrator._apply_recommended_state."""
+
+    won = "won"
+    walked = "walked"
+
+
+class PaymentStatusEnum(str, enum.Enum):
+    pending = "pending"
+    pre_authorized = "pre_authorized"
+    captured = "captured"
+    canceled = "canceled"
+    failed = "failed"
+
+
 class User(Base):
     """The end customer — the person texting the agent on WhatsApp to ask for help."""
 
@@ -150,6 +166,10 @@ class Case(Base):
     # trail (the LLM-side half is LLMCall.request_payload/response_text). See
     # app.orchestrator.resume_after_escalation.
     escalation_context: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Set once Analist's recommended_state distinguishes a real close (won)
+    # from a walk-away (walked) — None while still open. See
+    # app.orchestrator._apply_recommended_state, app.payments.
+    outcome: Mapped[OutcomeEnum | None] = mapped_column(Enum(OutcomeEnum, name="outcome_enum"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -169,6 +189,9 @@ class Case(Base):
     )
     outbound_queue: Mapped[list["OutboundQueueItem"]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="OutboundQueueItem.created_at"
+    )
+    payment: Mapped["Payment | None"] = relationship(
+        back_populates="case", cascade="all, delete-orphan", uselist=False
     )
 
 
@@ -269,3 +292,43 @@ class OutboundQueueItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     case: Mapped["Case"] = relationship(back_populates="outbound_queue")
+
+
+class Payment(Base):
+    """A Stripe pre-auth opened at case creation, captured (or canceled) once
+    the case closes. See app/payments.py, docs/MASTER-SPEC-v3.md Package G."""
+
+    __tablename__ = "payments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+
+    # Single-use token embedded in the checkout link sent to the customer
+    # (POST /payments/checkout/{access_token}) — not a session/API auth token.
+    access_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    checkout_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Pre-auth hold amount == vault pricing's min_ucret (a floor, not a
+    # ceiling) — V1 simplification, see docs/MASTER-SPEC-v3.md Package G:
+    # capture is capped at this amount even if the computed fee is higher.
+    amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    captured_amount: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+
+    status: Mapped[PaymentStatusEnum] = mapped_column(
+        Enum(PaymentStatusEnum, name="payment_status_enum"), nullable=False, default=PaymentStatusEnum.pending
+    )
+    # Set if the computed success fee exceeded `amount` at capture time — the
+    # shortfall needs a manual follow-up charge (out of scope for V1 code).
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    pre_authorized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    case: Mapped["Case"] = relationship(back_populates="payment")

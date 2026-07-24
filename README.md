@@ -496,6 +496,59 @@ status update for the case's own user is queued too regardless of outcome
 (still escalated, or resolved) — there's no synchronous requester to answer
 inline here, unlike `POST /web/chat`.
 
+## Payments (`app/payments.py`)
+
+Closes `docs/MASTER-SPEC-v3.md` Package G: a card is pre-authorized (held,
+never charged) when a case opens; the actual success fee is captured only
+once the case closes `won` — never on `walked`, where the hold is released
+instead. Same injectable-client seam as `AnthropicSubagentClient`: every
+function takes an optional `stripe_client` (a `StripeClient` Protocol),
+defaulting to `RealStripeClient()`.
+
+- **Pre-auth at case open.** `app.intake._confirm_and_create_case` looks up
+  the case's vertical pricing and, if priced, calls
+  `create_pre_auth(case, pricing)` — amount is vault pricing's `min_ucret`
+  (a floor, not the eventual fee — see below), attached via
+  `case.payment = payment` (no `db` needed, same "caller persists" contract
+  as `record_offer`/`record_message`). The case-created reply carries a
+  checkout link (`GET /payments/checkout/{access_token}`, public/no-auth —
+  the token itself is the credential); visiting it creates the actual
+  Stripe Checkout Session on first click and redirects there.
+- **`POST /payments/webhook`** verifies `Stripe-Signature` against
+  `STRIPE_WEBHOOK_SECRET` — the same pattern as WhatsApp's
+  `X-Hub-Signature-256` check. `checkout.session.completed` flips the
+  `Payment` to `pre_authorized`; `payment_intent.payment_failed` to
+  `failed`.
+- **Capture/cancel on close.** `app.orchestrator._apply_recommended_state`
+  now also sets `Case.outcome` (`won` on Analist's `"close"`, `walked` on
+  `"walk"`) — the same signal that already drives the state transition.
+  `app.payments.handle_turn_outcome(case)` is called right after every
+  `run_turn`/`resume_after_escalation` (in `whatsapp.py`, `web.py`, and
+  `review.py`'s `answer_escalation`) and captures or cancels the pre-auth
+  the instant a case actually closes; a no-op otherwise.
+- **Fee computation** (`compute_success_fee`): `savings = max(0, initial
+  ask − final price)`, `fee = max(min_ucret, savings × basari_yuzdesi /
+  100)` — `initial ask` is the counterparty's first recorded `Offer` (or
+  the very first offer at all if the counterparty never stated one),
+  `final price` the most recently recorded one by either side. This is why
+  `Case`/`Yazıcı` offers are now actually recorded: `run_turn` calls
+  `record_offer` whenever Analist's `counter_offer` or an approved draft's
+  `offer_made` is a number — the `Offer` table existed since V1 but nothing
+  wrote to it until this package needed real numbers to compute a fee from.
+- **V1 simplification, explicitly signed off on**: the pre-auth amount
+  (`min_ucret`) is a floor, not a ceiling — if the computed fee at capture
+  time exceeds it, capture is capped at the pre-authorized hold and
+  `Payment.note` records the shortfall for a manual follow-up charge (out
+  of scope for V1 code).
+- **The money-side guard**: `require_pre_auth(case)` — called from
+  `review.py`/`admin`'s `approve()` for `audience=counterparty` sends on
+  priced, non-demo cases — `409`s if the case's `Payment` hasn't reached at
+  least `pre_authorized`. Same shape as Package H's opt-in guard: a real
+  precondition enforced at the one place a message can actually go out.
+- `/admin/payments` lists every `Payment`; case detail shows status +
+  manual **Tahsil Et / İptal Et** overrides for when the automatic hook
+  misses an edge case.
+
 ## Channels
 
 - **WhatsApp** (`app/channels/whatsapp.py`): the webhook verification

@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% block title %}Ödemeler — DecisionOS{% endblock %}
+{% block content %}
+<h1>Ödemeler ({{ payments|length }})</h1>
+<table>
+<tr>
+  <th>Vaka</th>
+  <th>Tutar</th>
+  <th>Tahsil Edilen</th>
+  <th>Para Birimi</th>
+  <th>Durum</th>
+  <th>Not</th>
+  <th>Oluşturuldu</th>
+</tr>
+{% for p in payments %}
+<tr>
+  <td><a href="/admin/cases/{{ p.case_id }}">{{ p.case_id }}</a></td>
+  <td>{{ p.amount }}</td>
+  <td>{{ p.captured_amount or "-" }}</td>
+  <td>{{ p.currency }}</td>
+  <td>{{ p.status.value }}</td>
+  <td>{{ p.note or "-" }}</td>
+  <td>{{ p.created_at }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

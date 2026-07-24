@@ -31,6 +31,16 @@ class Settings(BaseSettings):
     # Bearer token required on every /review/* request (see app/review.py).
     review_token: str = "change-me"
 
+    # Stripe pre-auth -> capture (see app/payments.py, docs/MASTER-SPEC-v3.md Package G).
+    stripe_secret_key: str = "change-me"
+    stripe_publishable_key: str = "change-me"
+    stripe_webhook_secret: str = "change-me"
+
+    # Absolute base URL of this deployment, used to build links sent over
+    # WhatsApp/email (checkout links, opt-in links) — there's no inbound
+    # HTTP request to derive it from in those contexts.
+    public_base_url: str = "http://localhost:8000"
+
 
 @lru_cache
 def get_settings() -> Settings:
