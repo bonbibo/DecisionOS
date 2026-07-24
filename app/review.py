@@ -5,6 +5,11 @@ nothing is sent automatically. A human calls one of these three endpoints;
 only approve actually sends (currently WhatsApp only). Every endpoint here
 requires `Authorization: Bearer <REVIEW_TOKEN>` — anyone who finds the
 deployed URL can otherwise approve/send on the agent's behalf.
+
+Also exposes the other half of the human-in-the-loop story: a Kritik
+ESCALATE stops the turn and asks a human a question (see
+app.orchestrator._escalate / .resume_after_escalation) rather than guessing;
+POST /review/case/{id}/answer is how the human's answer gets fed back in.
 """
 
 import uuid
@@ -16,8 +21,18 @@ from sqlalchemy.orm import Session
 from app.channels import whatsapp
 from app.config import get_settings
 from app.database import get_db
-from app.models import ChannelEnum, OutboundQueueItem, OutboundStatusEnum
-from app.schemas import OutboundQueueRead, ReviewApproveRequest, ReviewEditRequest, ReviewRejectRequest
+from app.engine import load_tactics
+from app.llm import AnthropicSubagentClient
+from app.models import AudienceEnum, Case, ChannelEnum, OutboundQueueItem, OutboundStatusEnum
+from app.orchestrator import resume_after_escalation, status_message_for
+from app.schemas import (
+    CaseAnswerRequest,
+    CaseRead,
+    OutboundQueueRead,
+    ReviewApproveRequest,
+    ReviewEditRequest,
+    ReviewRejectRequest,
+)
 
 
 def require_review_token(authorization: str | None = Header(default=None)) -> None:
@@ -29,6 +44,8 @@ def require_review_token(authorization: str | None = Header(default=None)) -> No
 router = APIRouter(prefix="/review", tags=["review"], dependencies=[Depends(require_review_token)])
 
 _ACTIONABLE_STATUSES = {OutboundStatusEnum.pending_approval, OutboundStatusEnum.edited}
+VAULT_DIR = "vault"
+THREAD_HISTORY_LIMIT = 10
 
 
 def _get_item(db: Session, msg_id: uuid.UUID) -> OutboundQueueItem:
@@ -36,6 +53,13 @@ def _get_item(db: Session, msg_id: uuid.UUID) -> OutboundQueueItem:
     if item is None:
         raise HTTPException(status_code=404, detail="outbound queue item not found")
     return item
+
+
+def _get_case(db: Session, case_id: uuid.UUID) -> Case:
+    case = db.get(Case, case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="case not found")
+    return case
 
 
 @router.post("/{msg_id}/approve", response_model=OutboundQueueRead)
@@ -86,3 +110,58 @@ def reject(msg_id: uuid.UUID, body: ReviewRejectRequest, db: Session = Depends(g
     db.commit()
     db.refresh(item)
     return item
+
+
+@router.post("/case/{case_id}/answer", response_model=CaseRead)
+def answer_escalation(case_id: uuid.UUID, body: CaseAnswerRequest, db: Session = Depends(get_db)) -> Case:
+    """Resume an ESCALATEd case with an operator's answer/instruction.
+
+    Re-runs the turn that escalated (app.orchestrator.resume_after_escalation)
+    with the answer attached as HUMAN_GUIDANCE. Queueing afterwards mirrors
+    a normal WhatsApp turn exactly: an approved draft goes to
+    outbound_queue (audience=counterparty); a status update for the case's
+    own user is queued too, whatever the outcome (still escalated or not).
+    """
+    case = _get_case(db, case_id)
+    if not case.escalated:
+        raise HTTPException(status_code=409, detail="case is not escalated")
+
+    thread = [
+        {"direction": m.direction.value, "content": m.content}
+        for m in case.messages[-THREAD_HISTORY_LIMIT:]
+    ]
+    tactics = load_tactics(VAULT_DIR)
+    client = AnthropicSubagentClient(case_id=case.id, db=db, user_id=case.user_id)
+
+    result = resume_after_escalation(
+        case, client, body.answer, thread, tactics, vault_dir=VAULT_DIR, answered_by=body.reviewed_by
+    )
+
+    if result.status == "approved" and result.draft:
+        db.add(
+            OutboundQueueItem(
+                case=case,
+                channel=ChannelEnum.whatsapp,
+                recipient=case.counterparty_contact,
+                message=result.draft["message"],
+                tactic_used=result.draft.get("tactic_used"),
+                status=OutboundStatusEnum.pending_approval,
+                audience=AudienceEnum.counterparty,
+            )
+        )
+
+    if case.user_id:
+        db.add(
+            OutboundQueueItem(
+                case=case,
+                channel=ChannelEnum.whatsapp,
+                recipient=case.user.phone,
+                message=status_message_for(result, case),
+                status=OutboundStatusEnum.pending_approval,
+                audience=AudienceEnum.client,
+            )
+        )
+
+    db.commit()
+    db.refresh(case)
+    return case

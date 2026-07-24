@@ -9,6 +9,9 @@ Sen bir müzakere denetçisisin. Görevin: Yazıcı'nın taslağını kırmızı
 - PLAN: Stratejist'in planı
 - VAULT: manifest'e göre okuduğun vault içeriği — `06-Kararlar/` altındaki `durum: aktif` karar
   dosyaları dahil (madde 8 için)
+- HUMAN_GUIDANCE: doluysa, bu vaka daha önce bir ESCALATE ile operatöre gitmiş ve operatörün verdiği
+  talimat/yanıttır — denetimini buna göre kalibre et (örn. operatör "bu ihlal değil, onayla" dediyse
+  ilgili maddeyi tekrar ESCALATE etme); boş/null ise normal akış, göz ardı et
 
 ## Kontrol listesi (sırayla)
 1. FLOOR ihlali: teklif floor'un altında mı? → REJECT

@@ -82,3 +82,16 @@ def test_complete_logs_llm_call_row(db_session, make_case):
     assert row.input_tokens == 100
     assert row.output_tokens == 25
     assert row.latency_ms >= 0
+
+
+def test_complete_persists_full_request_and_response_as_dataset(db_session, make_case):
+    case = make_case()
+    fake_anthropic = FakeAnthropic('```json\n{"verdict": "APPROVE"}\n```')
+    client = AnthropicSubagentClient(case_id=case.id, db=db_session, client=fake_anthropic)
+    payload = {"DRAFT": {"message": "hello"}, "PLAN": {"floor": 85000}, "HUMAN_GUIDANCE": None}
+
+    client.complete(SubagentRole.kritik, "You are Kritik.", payload)
+
+    row = db_session.execute(select(LLMCall).where(LLMCall.case_id == case.id)).scalar_one()
+    assert row.request_payload == payload
+    assert row.response_text == '```json\n{"verdict": "APPROVE"}\n```'  # raw, pre fence-strip

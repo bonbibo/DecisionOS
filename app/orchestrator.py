@@ -18,6 +18,7 @@ top of that.
 """
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from app.engine import InvalidTransition, NegotiationEngine, Tactic
 from app.models import Case, StateEnum
@@ -75,6 +76,7 @@ def _draft_and_review(
     thread: list[dict],
     analysis: dict,
     vault_dir: str = "vault",
+    human_guidance: str | None = None,
 ) -> TurnResult:
     """Run the Yazıcı <-> Kritik loop for one plan. Returns status "approved",
     "rejected" (caller should re-plan), or "escalated"."""
@@ -92,6 +94,7 @@ def _draft_and_review(
                     "ANALYSIS": analysis,
                     "REVISION_NOTE": revision_note,
                     "VAULT": _vault_block(SubagentRole.yazici, vault_dir),
+                    "HUMAN_GUIDANCE": human_guidance,
                 },
             )
         except SubagentEscalated as exc:
@@ -106,6 +109,7 @@ def _draft_and_review(
                     "TACTIC": tactic.body if tactic else None,
                     "PLAN": plan,
                     "VAULT": _vault_block(SubagentRole.kritik, vault_dir),
+                    "HUMAN_GUIDANCE": human_guidance,
                 },
             )
         except SubagentEscalated as exc:
@@ -145,12 +149,16 @@ def run_turn(
     profiles: list[dict] | None = None,
     intel: dict | None = None,
     vault_dir: str = "vault",
+    human_guidance: str | None = None,
 ) -> TurnResult:
     """Run one negotiation turn for an incoming counterparty message.
 
     Mutates `case` in place (state, plan, escalated/escalation_reason) the
     same way NegotiationEngine does elsewhere; callers persist it via a
-    DB session.
+    DB session. `human_guidance` is only set when resuming a previously
+    ESCALATEd case with an operator's answer (see resume_after_escalation) —
+    it rides alongside every subagent call so Analist/Stratejist/Yazıcı/Kritik
+    can factor it in; it's None on a normal turn.
     """
     engine = NegotiationEngine(case, tactics=tactics)
 
@@ -164,15 +172,18 @@ def run_turn(
                 "PROFILES": profiles or [],
                 "STATE": {"asama": case.state.value},
                 "VAULT": _vault_block(SubagentRole.analist, vault_dir),
+                "HUMAN_GUIDANCE": human_guidance,
             },
         )
     except SubagentEscalated as exc:
-        return _escalate(case, TurnResult(status="escalated", escalation_reason=str(exc)))
+        return _escalate(case, TurnResult(status="escalated", escalation_reason=str(exc)), incoming_message)
 
     try:
         _apply_recommended_state(engine, analysis["recommended_state"])
     except (ValueError, InvalidTransition) as exc:
-        return _escalate(case, TurnResult(status="escalated", analysis=analysis, escalation_reason=str(exc)))
+        return _escalate(
+            case, TurnResult(status="escalated", analysis=analysis, escalation_reason=str(exc)), incoming_message
+        )
 
     plan = case.plan
     result = None
@@ -193,16 +204,19 @@ def run_turn(
                         "PROFILE": analysis,
                         "SEGMENT": _get_segment(case),
                         "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
+                        "HUMAN_GUIDANCE": human_guidance,
                     },
                 )
             except SubagentEscalated as exc:
                 return _escalate(
-                    case, TurnResult(status="escalated", analysis=analysis, escalation_reason=str(exc))
+                    case,
+                    TurnResult(status="escalated", analysis=analysis, escalation_reason=str(exc)),
+                    incoming_message,
                 )
             case.plan = plan
 
         tactic = _select_tactic(plan, tactics)
-        result = _draft_and_review(client, case, plan, tactic, thread, analysis, vault_dir)
+        result = _draft_and_review(client, case, plan, tactic, thread, analysis, vault_dir, human_guidance)
 
         if result.status != "rejected":
             break
@@ -213,16 +227,66 @@ def run_turn(
         )
 
     if result.status == "escalated":
-        return _escalate(case, result)
+        return _escalate(case, result, incoming_message)
     case.escalated = False
     case.escalation_reason = None
     return result
 
 
-def _escalate(case: Case, result: TurnResult) -> TurnResult:
+def _escalate(case: Case, result: TurnResult, incoming_message: str | None = None) -> TurnResult:
     case.escalated = True
     case.escalation_reason = result.escalation_reason
+    if incoming_message is not None:
+        context = dict(case.escalation_context or {})
+        context["incoming_message"] = incoming_message
+        case.escalation_context = context
     return result
+
+
+def resume_after_escalation(
+    case: Case,
+    client: SubagentClient,
+    human_answer: str,
+    thread: list[dict],
+    tactics: list[Tactic],
+    profiles: list[dict] | None = None,
+    intel: dict | None = None,
+    vault_dir: str = "vault",
+    answered_by: str | None = None,
+) -> TurnResult:
+    """Re-run the turn that triggered an ESCALATE, now with an operator's
+    answer attached as HUMAN_GUIDANCE. Requires `case.escalated` — callers
+    (POST /review/case/{id}/answer, the admin panel) are responsible for
+    that check and for queueing an approved draft afterwards, same as
+    run_turn(). The original incoming message is read back from
+    `case.escalation_context` (set by _escalate); every answer is appended
+    there too, so the full Q&A trail is on the Case as a dataset artifact
+    in its own right, alongside the raw LLM I/O in LLMCall.
+    """
+    context = dict(case.escalation_context or {})
+    incoming_message = context.get("incoming_message", "")
+    answers = list(context.get("human_answers", []))
+    answers.append(
+        {
+            "answer": human_answer,
+            "answered_by": answered_by,
+            "answered_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    context["human_answers"] = answers
+    case.escalation_context = context
+
+    return run_turn(
+        case,
+        client,
+        incoming_message,
+        thread,
+        tactics,
+        profiles=profiles,
+        intel=intel,
+        vault_dir=vault_dir,
+        human_guidance=human_answer,
+    )
 
 
 def status_message_for(result: TurnResult, case: Case) -> str:

@@ -323,6 +323,17 @@ run_intake_turn(user, client, incoming_message=text, thread=thread, tactics=tact
 - **Cost tracking**: every call logs a row to `llm_calls` (`case_id`, `user_id`,
   `role`, `model`, `input_tokens`, `output_tokens`, `latency_ms`), so a per-role
   cost/quality query against real traffic is just a SQL query away.
+- **Dataset**: the same row also carries `request_payload` (the exact dict
+  sent — `PLAN`/`DRAFT`/`VAULT`/`HUMAN_GUIDANCE`/etc., whatever that role's
+  contract is) and `response_text` (the raw completion, before fence-
+  stripping). Every subagent call the system ever makes is a complete,
+  replayable input/output pair in `llm_calls` — not just its token count —
+  so the full history (Analist's read of the counterparty, Stratejist's
+  plan, Yazıcı's drafts, Kritik's verdicts, every escalation and the
+  operator's answer) is queryable and exportable later for analysis or
+  fine-tuning without having re-instrumented anything. `/admin/costs`
+  reads the token/latency side of this; the payload/response columns are
+  there for a future export script rather than surfaced in the UI yet.
 
 ## Intake & user memory (`app/intake.py`)
 
@@ -397,6 +408,50 @@ before deploying). Anyone with the token can approve/send on the agent's
 behalf, so treat it like any other credential. A future version could drive
 the same three endpoints from a second WhatsApp bot number instead of a web
 panel — the queue table doesn't care who calls it, as long as they have the token.
+
+### Human-in-the-loop question/answer (escalation)
+
+Kritik's checklist item 7 (legal topic, phone number requested, aggression,
+identity questions) and a handful of other conditions (max REVISE/REJECT
+rounds exhausted, an unparseable subagent response after retry) return
+`ESCALATE` — the negotiation stops rather than guessing, `Case.escalated`
+flips `True`, and `Case.escalation_reason` carries Kritik's `violations` (or
+the failure reason) as the question a human needs to look at. This was a
+deliberate choice not to add new escalation triggers beyond what Kritik/the
+retry logic already decide — Kritik's own checklist already knows what's
+critical enough to stop for.
+
+`app.orchestrator.resume_after_escalation()` is how an operator's answer
+gets back in:
+
+```python
+# case.escalated is True, case.escalation_context["incoming_message"] holds
+# the message that triggered it (set by _escalate at the moment it happened)
+result = resume_after_escalation(case, client, "Bu normal, paylaşabilirsin", thread, tactics)
+```
+
+It re-runs the same turn (`run_turn` under the hood) with the answer
+attached as `HUMAN_GUIDANCE` on *every* subagent call for that turn
+(Analist/Stratejist/Yazıcı/Kritik all read it — each prompt has a short note
+on what to do with it, e.g. Kritik: don't re-`ESCALATE` the same violation
+if the operator already cleared it). Every answer is also appended to
+`case.escalation_context["human_answers"]` (`{answer, answered_by,
+answered_at}`) — a durable audit trail of the human side of the loop, kept
+on the `Case` row itself rather than only in a log line.
+
+Two front doors, same underlying function:
+- `POST /review/case/{id}/answer` — `{answer, reviewed_by}`, same
+  `Authorization: Bearer <REVIEW_TOKEN>` as the rest of `/review/*`. Returns
+  the updated `CaseRead` (still escalated, or resolved).
+- `/admin/cases/{id}` — a form shown whenever the case is escalated
+  (`POST /admin/cases/{id}/answer`), same duplication-over-refactor pattern
+  as the approve/edit/reject actions.
+
+Either way, the queueing afterwards is identical to a normal WhatsApp turn:
+an approved draft goes to `outbound_queue` (`audience=counterparty`); a
+status update for the case's own user is queued too regardless of outcome
+(still escalated, or resolved) — there's no synchronous requester to answer
+inline here, unlike `POST /web/chat`.
 
 ## Channels
 
@@ -528,10 +583,18 @@ intake-or-negotiation routing -> human-approval -> send loop (via
 `POST /review/*` or the `/admin` panel) are wired up end to end, with every
 inbound/write surface authenticated (WhatsApp signature verification,
 `REVIEW_TOKEN` bearer/Basic auth on review + admin, web session tokens).
-Still open: the Gmail channel's `run_turn`/intake dispatch, multi-channel
-sending in `POST /review/{id}/approve` (WhatsApp only today — a web-origin
-case's counterparty draft is still queued as `channel=whatsapp`, since the
-counterparty side has no web presence), and auth/identity on the intake
-side (any WhatsApp number or `{email, phone}` pair can start a case —
-reasonable for a public onboarding flow, but worth a deliberate look before
-scaling pilots).
+Kritik's `ESCALATE` verdict is a real human-in-the-loop question/answer
+loop now, not a dead end (`resume_after_escalation`, `POST
+/review/case/{id}/answer`, and the `/admin` panel's equivalent form — see
+Human-in-the-loop question/answer above), and every subagent call's full
+input/output is kept in `llm_calls` as a dataset (`request_payload`,
+`response_text`), not just token counts. Still open: the Gmail channel's
+`run_turn`/intake dispatch, multi-channel sending in `POST
+/review/{id}/approve` (WhatsApp only today — a web-origin case's
+counterparty draft is still queued as `channel=whatsapp`, since the
+counterparty side has no web presence), auth/identity on the intake side
+(any WhatsApp number or `{email, phone}` pair can start a case — reasonable
+for a public onboarding flow, but worth a deliberate look before scaling
+pilots), and an actual dataset *export* (JSONL/fine-tuning format) on top
+of the `llm_calls` storage — the data's there, but nothing reads it out yet
+beyond `/admin/costs`' token/latency rollup.

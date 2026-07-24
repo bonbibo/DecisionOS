@@ -3,7 +3,7 @@ from pathlib import Path
 
 from app.engine import load_tactics
 from app.models import StateEnum
-from app.orchestrator import run_turn
+from app.orchestrator import resume_after_escalation, run_turn
 from app.subagents import SubagentRole
 
 VAULT_DIR = Path(__file__).resolve().parent.parent / "vault"
@@ -200,6 +200,81 @@ def test_run_turn_analist_escalation_short_circuits(new_case):
     assert new_case.escalated is True
     assert new_case.state is StateEnum.discovery  # unchanged
     assert SubagentRole.stratejist not in client.calls
+
+
+def test_run_turn_escalation_records_incoming_message_in_context(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient({SubagentRole.analist: ["not json", "still not json"]})
+
+    run_turn(new_case, client, "100000 istiyorum", thread=[], tactics=tactics)
+
+    assert new_case.escalation_context["incoming_message"] == "100000 istiyorum"
+
+
+def test_run_turn_passes_human_guidance_to_every_subagent(new_case):
+    new_case.vertical = "kira-bae"
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [ANALIST_OK],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    run_turn(new_case, client, "merhaba", thread=[], tactics=tactics, human_guidance="telefon isteği normal, onayla")
+
+    for role in (SubagentRole.analist, SubagentRole.stratejist, SubagentRole.yazici, SubagentRole.kritik):
+        assert client.payloads[role][0]["HUMAN_GUIDANCE"] == "telefon isteği normal, onayla"
+
+
+def test_resume_after_escalation_reuses_stored_incoming_message_and_appends_answer(new_case):
+    new_case.vertical = "kira-bae"
+    new_case.escalated = True
+    new_case.escalation_reason = "7: telefon istedi"
+    new_case.escalation_context = {"incoming_message": "telefon numaramı verir misin diyor"}
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient(
+        {
+            SubagentRole.analist: [ANALIST_OK],
+            SubagentRole.stratejist: [STRATEJIST_OK],
+            SubagentRole.yazici: [_yazici()],
+            SubagentRole.kritik: [_kritik("APPROVE")],
+        }
+    )
+
+    result = resume_after_escalation(
+        new_case, client, "Bu normal, telefon numarasını paylaşabilirsin", thread=[], tactics=tactics,
+        answered_by="gokhan",
+    )
+
+    assert result.status == "approved"
+    assert new_case.escalated is False
+    assert client.payloads[SubagentRole.analist][0]["INCOMING"] == "telefon numaramı verir misin diyor"
+    assert client.payloads[SubagentRole.kritik][0]["HUMAN_GUIDANCE"] == "Bu normal, telefon numarasını paylaşabilirsin"
+
+    answers = new_case.escalation_context["human_answers"]
+    assert len(answers) == 1
+    assert answers[0]["answer"] == "Bu normal, telefon numarasını paylaşabilirsin"
+    assert answers[0]["answered_by"] == "gokhan"
+    assert answers[0]["answered_at"]
+
+
+def test_resume_after_escalation_can_re_escalate_and_still_appends_answer(new_case):
+    new_case.vertical = "kira-bae"
+    new_case.escalated = True
+    new_case.escalation_context = {"incoming_message": "merhaba"}
+    tactics = load_tactics(VAULT_DIR)
+    client = ScriptedClient({SubagentRole.analist: ["not json", "still not json"]})
+
+    result = resume_after_escalation(new_case, client, "bak bakalım", thread=[], tactics=tactics)
+
+    assert result.status == "escalated"
+    assert new_case.escalated is True
+    assert len(new_case.escalation_context["human_answers"]) == 1
+    assert new_case.escalation_context["incoming_message"] == "merhaba"
 
 
 def test_run_turn_illegal_recommended_state_escalates(new_case):

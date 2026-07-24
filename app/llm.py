@@ -93,6 +93,11 @@ class AnthropicSubagentClient:
                 input_tokens=response.usage.input_tokens,
                 output_tokens=response.usage.output_tokens,
                 latency_ms=latency_ms,
+                # Full I/O, kept as a dataset (see app.models.LLMCall) — payload is
+                # exactly what call_subagent_json sent; response_text is the raw
+                # completion before fence-stripping, for fidelity.
+                request_payload=payload,
+                response_text=text,
             )
         )
         self.db.commit()

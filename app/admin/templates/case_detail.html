@@ -13,6 +13,26 @@
 </p>
 {% if case.escalation_reason %}<p><strong>Eskalasyon nedeni:</strong> {{ case.escalation_reason }}</p>{% endif %}
 
+{% if case.escalation_context and case.escalation_context.human_answers %}
+<h2>Operatör Geçmişi</h2>
+<table>
+<tr><th>Cevap</th><th>Kim</th><th>Tarih</th></tr>
+{% for a in case.escalation_context.human_answers %}
+<tr><td>{{ a.answer }}</td><td>{{ a.answered_by or "-" }}</td><td>{{ a.answered_at }}</td></tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% if case.escalated %}
+<h2>Soruyu Yanıtla</h2>
+<p>Bu vaka eskale edildi ve bir sonraki turu bekliyor. Aşağıya talimat/cevap yazıp gönderirseniz
+  müzakere kaldığı yerden bu yanıtla devam eder.</p>
+<form method="post" action="/admin/cases/{{ case.id }}/answer">
+  <textarea name="answer" placeholder="örn. Bu telefon isteği normal, onayla ve devam et." required></textarea>
+  <button type="submit">Cevapla ve Devam Ettir</button>
+</form>
+{% endif %}
+
 <h2>Plan</h2>
 <pre>{{ case.plan or "-" }}</pre>
 

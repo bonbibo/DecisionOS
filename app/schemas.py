@@ -67,6 +67,11 @@ class ReviewRejectRequest(BaseModel):
     reviewed_by: str | None = None
 
 
+class CaseAnswerRequest(BaseModel):
+    answer: str
+    reviewed_by: str | None = None
+
+
 class WebRegisterRequest(BaseModel):
     email: str
     phone: str

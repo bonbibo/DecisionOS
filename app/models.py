@@ -144,6 +144,12 @@ class Case(Base):
     plan: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     escalated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     escalation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # {"incoming_message": str, "human_answers": [{"answer": str, "answered_by": str|None,
+    # "answered_at": iso str}, ...]} — set when an ESCALATE happens, appended to on every
+    # POST /review/case/{id}/answer resume. Also the human-in-the-loop half of the dataset
+    # trail (the LLM-side half is LLMCall.request_payload/response_text). See
+    # app.orchestrator.resume_after_escalation.
+    escalation_context: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -223,6 +229,11 @@ class LLMCall(Base):
     input_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Full call I/O, kept as a dataset for later analysis/fine-tuning — not just
+    # the token/latency metrics above. See app/llm.py::AnthropicSubagentClient.complete.
+    request_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    response_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
