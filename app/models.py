@@ -118,6 +118,9 @@ class Case(Base):
     channel: Mapped[ChannelEnum] = mapped_column(Enum(ChannelEnum, name="channel_enum"), nullable=False)
     # Playbook vertical, e.g. "kira-bae" — matches a vault/01-Playbooks/*.md `dikey`.
     vertical: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # True only for internal/demo cases — gates access to `durum: demo` vault/07-Fiyatlama/*.md
+    # pricing (e.g. arac-bae) that real customers should never be quoted. See app/intake.py.
+    is_demo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     counterparty_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     counterparty_contact: Mapped[str] = mapped_column(String(255), nullable=False)
 

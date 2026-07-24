@@ -17,6 +17,9 @@ from app.models import Case, ChannelEnum, StateEnum, User, UserMemory
 from app.subagents import SubagentClient, SubagentEscalated, SubagentRole, call_subagent_json
 from app.vault import VaultReader
 
+INTAKE_VERTICAL = "kira-bae"
+MAX_FEE_REVISIONS = 1
+
 CONFIRMATION_WORDS = {
     "evet",
     "onaylıyorum",
@@ -47,6 +50,41 @@ def _is_confirmation(text: str) -> bool:
     return any(word in normalized for word in CONFIRMATION_WORDS)
 
 
+def _select_pricing(vault_documents: list[dict], dikey: str, allow_demo: bool = False) -> dict | None:
+    """Find the vault/07-Fiyatlama/<dikey>.md frontmatter for a vertical.
+
+    Only `durum: aktif` pricing is offered to real customers; `demo` entries
+    (e.g. arac-bae while it's unvalidated) require `allow_demo=True` — which
+    intake never passes, since intake only ever opens real (non-demo) cases.
+    """
+    allowed_statuses = {"aktif"} | ({"demo"} if allow_demo else set())
+    for doc in vault_documents:
+        frontmatter = doc.get("frontmatter") or {}
+        if (
+            frontmatter.get("dikey") == dikey
+            and frontmatter.get("durum") in allowed_statuses
+            and "fiyat_id" in frontmatter
+        ):
+            return frontmatter
+    return None
+
+
+def _fee_mismatch(fee_offer: dict | None, pricing: dict) -> str | None:
+    """None if `fee_offer` matches `pricing`'s numbers; otherwise a correction note for the subagent."""
+    if not fee_offer:
+        return "fee_offer is missing but ready=true; fill it in from PRICING"
+
+    expected = {
+        "basari_yuzdesi": pricing.get("basari_yuzdesi"),
+        "min_ucret": pricing.get("min_ucret"),
+        "para_birimi": pricing.get("para_birimi"),
+    }
+    actual = {key: fee_offer.get(key) for key in expected}
+    if actual != expected:
+        return f"fee_offer {actual} does not match PRICING {expected} — use PRICING's numbers exactly"
+    return None
+
+
 def _apply_memory_updates(user: User, updates: dict) -> None:
     existing = {m.key: m for m in user.memory}
     for key, value in updates.items():
@@ -59,7 +97,7 @@ def _apply_memory_updates(user: User, updates: dict) -> None:
 def _create_case_from_fields(user: User, fields: dict) -> Case:
     case = Case(
         channel=ChannelEnum.whatsapp,
-        vertical="kira-bae",
+        vertical=INTAKE_VERTICAL,
         state=StateEnum.discovery,
         counterparty_name=fields.get("ev_sahibi_adi"),
         counterparty_contact=fields.get("ev_sahibi_iletisim") or "",
@@ -119,20 +157,38 @@ def run_intake_turn(
     if state.get("awaiting_confirmation") and _is_confirmation(incoming_message):
         return _confirm_and_create_case(user, client, tactics, vault_dir)
 
-    try:
-        data = call_subagent_json(
-            client,
-            SubagentRole.intake,
-            {
-                "INCOMING": incoming_message,
-                "THREAD": thread,
-                "MEMORY": {m.key: m.value for m in user.memory},
-                "COLLECTED_FIELDS": state.get("collected_fields", {}),
-                "VAULT": VaultReader(vault_dir).read_for_role(SubagentRole.intake.value).to_dict(),
-            },
-        )
-    except SubagentEscalated as exc:
-        return IntakeResult(status="escalated", escalation_reason=str(exc))
+    vault_context = VaultReader(vault_dir).read_for_role(SubagentRole.intake.value).to_dict()
+    pricing = _select_pricing(vault_context["documents"], INTAKE_VERTICAL)
+
+    revision_note = None
+    data = None
+    for attempt in range(MAX_FEE_REVISIONS + 1):
+        try:
+            data = call_subagent_json(
+                client,
+                SubagentRole.intake,
+                {
+                    "INCOMING": incoming_message,
+                    "THREAD": thread,
+                    "MEMORY": {m.key: m.value for m in user.memory},
+                    "COLLECTED_FIELDS": state.get("collected_fields", {}),
+                    "PRICING": pricing,
+                    "REVISION_NOTE": revision_note,
+                    "VAULT": vault_context,
+                },
+            )
+        except SubagentEscalated as exc:
+            return IntakeResult(status="escalated", escalation_reason=str(exc))
+
+        if not data["ready"] or pricing is None:
+            break
+
+        mismatch = _fee_mismatch(data.get("fee_offer"), pricing)
+        if mismatch is None:
+            break
+        if attempt >= MAX_FEE_REVISIONS:
+            return IntakeResult(status="escalated", escalation_reason=f"fee validation failed: {mismatch}")
+        revision_note = mismatch
 
     _apply_memory_updates(user, data.get("memory_updates", {}))
 

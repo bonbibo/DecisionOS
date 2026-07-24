@@ -151,7 +151,9 @@ vault/
   05-Metrikler/
     dashboard.md               win-rate / tactic-score dashboard — regenerated, not hand-edited
   06-Kararlar/                architecture decision records (placeholder — content lands in a later PR)
-  07-Fiyatlama/                pricing model per vertical (placeholder — content lands in a later PR)
+  07-Fiyatlama/
+    kira-bae.md                pricing model (`durum: aktif`) — success fee % / min fee / flat alternative
+    arac-bae.md                second-vertical demo pricing (`durum: demo`) — not offered to real customers
   08-Musteri-Profilleri/       customer segments (placeholder — content lands in a later PR)
   _sablonlar/                 templates for new tactic / retro notes
 ```
@@ -303,14 +305,24 @@ result = run_intake_turn(user, client, incoming_message=text, thread=thread, tac
   change the schema) and requires `hedef_kira` + `ev_sahibi_iletisim` before
   `ready` can flip `true`.
 - Once `ready=true`, the subagent's own `reply` carries the savings-fee
-  summary + approval ask (`"tasarrufun %25'i, min 500 AED"`) and
-  `awaiting_confirmation` is set. The **next** message is checked with a
-  simple deterministic keyword match (`evet`/`yes`/`onaylıyorum`/...) — not
-  another LLM call — rather than inventing a `confirmed` field in the JSON
-  contract. A confirmation creates the `Case` from `collected_fields`, calls
-  Stratejist once to seed `Case.plan`, and moves the case straight to
-  `anchoring` via `NegotiationEngine.start_anchor()`. Anything else falls
-  through to a normal intake turn (corrections, questions, etc.).
+  summary + approval ask, and `awaiting_confirmation` is set. The **next**
+  message is checked with a simple deterministic keyword match
+  (`evet`/`yes`/`onaylıyorum`/...) — not another LLM call — rather than
+  inventing a `confirmed` field in the JSON contract. A confirmation creates
+  the `Case` from `collected_fields`, calls Stratejist once to seed
+  `Case.plan`, and moves the case straight to `anchoring` via
+  `NegotiationEngine.start_anchor()`. Anything else falls through to a
+  normal intake turn (corrections, questions, etc.).
+- **No hardcoded fee numbers anywhere in code or prompts.** The `PRICING`
+  input (`app/intake.py`'s `_select_pricing`) pulls the active
+  `vault/07-Fiyatlama/<dikey>.md` frontmatter (`basari_yuzdesi`, `min_ucret`,
+  `para_birimi`, `sabit_alternatif`) into every intake call; `durum: demo`
+  pricing (e.g. `arac-bae.md`) is excluded unless explicitly requested with
+  `allow_demo=True`, which intake never does — real customers only ever see
+  `durum: aktif` pricing. When `ready=true`, the subagent must also return a
+  `fee_offer` echoing those numbers back; `_fee_mismatch` compares it against
+  `PRICING` and, on a mismatch, retries once with a `REVISION_NOTE` before
+  escalating — protection against the LLM inventing or misremembering a fee.
 - `memory_updates` are durable facts worth keeping across cases (e.g.
   `risk_toleransi: dusuk`) — written to `UserMemory` (unique per
   `(user_id, key)`, upserted) and fed back as `MEMORY` on every future intake

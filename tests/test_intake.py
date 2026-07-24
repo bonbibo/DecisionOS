@@ -24,7 +24,10 @@ class ScriptedClient:
         return queue.pop(0)
 
 
-def _intake_response(reply, collected_fields, missing_fields, ready, memory_updates=None):
+KIRA_BAE_FEE_OFFER = {"basari_yuzdesi": 25, "min_ucret": 500, "para_birimi": "AED"}
+
+
+def _intake_response(reply, collected_fields, missing_fields, ready, memory_updates=None, fee_offer=None):
     return json.dumps(
         {
             "reply": reply,
@@ -32,6 +35,7 @@ def _intake_response(reply, collected_fields, missing_fields, ready, memory_upda
             "missing_fields": missing_fields,
             "ready": ready,
             "memory_updates": memory_updates or {},
+            "fee_offer": fee_offer,
         }
     )
 
@@ -90,6 +94,7 @@ def test_run_intake_turn_ready_sets_awaiting_confirmation_without_creating_case(
                     },
                     [],
                     True,
+                    fee_offer=KIRA_BAE_FEE_OFFER,
                 )
             ]
         }
@@ -261,7 +266,10 @@ def test_run_intake_turn_includes_vault_block(make_user):
 
     payload = client.payloads[SubagentRole.intake][0]
     assert "VAULT" in payload
-    assert payload["VAULT"] == {"documents": [], "warnings": []}  # 07/08 are placeholders until PR-B/D
+    vault_paths = {d["path"] for d in payload["VAULT"]["documents"]}
+    # 07-Fiyatlama has real content as of PR-B; 08-Musteri-Profilleri is still a placeholder.
+    assert vault_paths == {"07-Fiyatlama/arac-bae.md", "07-Fiyatlama/kira-bae.md"}
+    assert payload["VAULT"]["warnings"] == []
 
 
 def test_run_intake_turn_confirmation_includes_vault_block_for_stratejist(make_user):

@@ -25,7 +25,8 @@ def test_read_for_role_stratejist_gets_playbook_and_taktikler():
     paths = {d.path for d in ctx.documents}
     assert "01-Playbooks/kira-bae.md" in paths
     assert "01-Playbooks/taktikler/TK-001-rakip-teklif.md" in paths
-    assert len(paths) == 4
+    # 06-Kararlar/, 07-Fiyatlama/ are also in stratejist's manifest scope.
+    assert "07-Fiyatlama/kira-bae.md" in paths
 
 
 def test_read_for_role_analist_gets_karsi_taraf():
