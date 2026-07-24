@@ -7,7 +7,18 @@ from app.database import SessionLocal, engine, get_db
 from app.main import app
 from app.models import Case, ChannelEnum, StateEnum, User
 
-_TABLES_TO_CLEAN = ["outbound_queue", "llm_calls", "offers", "messages", "user_memory", "cases", "users"]
+_TABLES_TO_CLEAN = [
+    "outbound_queue",
+    "llm_calls",
+    "offers",
+    "messages",
+    "payments",
+    "opt_ins",
+    "user_memory",
+    "cases",
+    "users",
+    "waitlist_signups",
+]
 
 
 @pytest.fixture

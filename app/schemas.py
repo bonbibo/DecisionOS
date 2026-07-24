@@ -123,3 +123,17 @@ class CaseTimelineRead(BaseModel):
     escalation_reason: str | None
     messages: list[TimelineMessageRead]
     offers: list[TimelineOfferRead]
+
+
+class WaitlistRequest(BaseModel):
+    email: str
+    phone: str | None = None
+    note: str | None = None
+    source: str | None = None
+
+
+class WaitlistResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str

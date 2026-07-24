@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DecisionOS — Kiranız için sizin adınıza pazarlık ederiz</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; max-width: 40rem; margin: 0 auto;
+         padding: 3rem 1.25rem 5rem; color: #1a1a1a; line-height: 1.55; }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  .lede { font-size: 1.15rem; color: #444; margin-bottom: 2.5rem; }
+  .steps { list-style: none; padding: 0; margin: 0 0 3rem; counter-reset: step; }
+  .steps li { counter-increment: step; padding-left: 2.5rem; position: relative; margin-bottom: 1rem; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 0;
+    width: 1.75rem; height: 1.75rem; border-radius: 50%; background: #1a1a1a; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 600; }
+  form { background: #f7f7f8; border-radius: 12px; padding: 1.5rem; }
+  form h2 { margin-top: 0; font-size: 1.1rem; }
+  input, textarea { width: 100%; box-sizing: border-box; padding: 0.6rem; margin-bottom: 0.75rem;
+    border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+  button { padding: 0.75rem 1.5rem; background: #1a1a1a; color: #fff; border: none; border-radius: 6px;
+    font: inherit; font-weight: 600; cursor: pointer; }
+  #status { margin-top: 0.75rem; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>Kiranız yükseldi mi?</h1>
+<p class="lede">Sizin adınıza yazılı olarak pazarlık ederiz. <strong>Kazandırmazsak ödemezsiniz.</strong></p>
+
+<ol class="steps">
+  <li>WhatsApp'a ne istediğinizi yazın — birkaç mesajla vaka açılır.</li>
+  <li>Ajan ev sahibi/emlakçıyla sizin adınıza yazışarak pazarlığı yürütür; her adımı onayınıza sunar.</li>
+  <li>Anlaşma sağlanınca tasarruf raporu çıkar — ücretimiz sadece kazandırdığımız tutarın bir yüzdesi.</li>
+</ol>
+
+<form id="waitlist-form">
+  <h2>Bekleme listesine katılın</h2>
+  <input type="email" name="email" placeholder="E-posta" required>
+  <input type="tel" name="phone" placeholder="Telefon (opsiyonel)">
+  <textarea name="note" placeholder="Durumunuzu kısaca anlatın (opsiyonel)" rows="3"></textarea>
+  <button type="submit">Listeye katıl</button>
+  <div id="status"></div>
+</form>
+
+<script>
+document.getElementById('waitlist-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var form = e.target;
+  var status = document.getElementById('status');
+  var payload = {
+    email: form.email.value,
+    phone: form.phone.value || null,
+    note: form.note.value || null,
+    source: new URLSearchParams(window.location.search).get('source')
+  };
+  status.textContent = 'Gönderiliyor...';
+  try {
+    var resp = await fetch('/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (resp.ok) {
+      window.location.href = '/waitlist/thanks';
+    } else {
+      status.textContent = 'Bir şeyler ters gitti, tekrar deneyin.';
+    }
+  } catch (err) {
+    status.textContent = 'Bir şeyler ters gitti, tekrar deneyin.';
+  }
+});
+</script>
+</body>
+</html>

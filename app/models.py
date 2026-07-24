@@ -141,6 +141,25 @@ class UserMemory(Base):
     user: Mapped["User"] = relationship(back_populates="memory")
 
 
+class WaitlistSignup(Base):
+    """A landing-page waitlist signup (Package I) — deliberately separate
+    from User: this is a pre-product demand signal, not a customer with a
+    Case yet."""
+
+    __tablename__ = "waitlist_signups"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Case(Base):
     __tablename__ = "cases"
 

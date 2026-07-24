@@ -26,9 +26,10 @@ app/
   schemas.py            Pydantic request/response models
   prompts/                 Subagent system prompts, incl. intake.md (see below)
   channels/
-    whatsapp.py          Meta Cloud API webhook — routes to intake or run_turn()
-    email.py              Gmail API (send + Pub/Sub push) stub
+    whatsapp.py          Meta Cloud API webhook — routes to intake or run_turn(); opt-in guard
+    email.py              Gmail send + initial-contact email (Package H)
     web.py                 POST /web/register|chat, GET /web/case/{id}/timeline
+    optin.py                GET /optin/{case_id} — click-to-WhatsApp landing page
   admin/
     __init__.py            /admin operator panel (Basic auth via REVIEW_TOKEN)
     templates/              Jinja templates for the panel
@@ -37,6 +38,10 @@ app/
     property_finder.py       PropertyFinderAdapter (stub fetch, injectable fetch_fn)
     bayut.py                  BayutAdapter (same shape)
     aggregate.py               run_intel() -> vault/09-Piyasa-Verisi/<dikey>.md
+  payments.py              Stripe pre-auth -> capture (Package G)
+  public/
+    __init__.py             GET /, POST /waitlist, GET /waitlist/thanks
+    templates/               Shared with app/channels/optin.py
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
@@ -633,6 +638,27 @@ defaulting to `RealStripeClient()`.
     case's `messages` and `offers` logs (there's no separate
     state-transition history table, so the timeline is reconstructed from
     those two logs rather than a dedicated audit trail).
+
+## Landing + waitlist (`app/public/`)
+
+Closes `docs/MASTER-SPEC-v3.md` Package I: the trust face and the demand
+signal in one small, public (no-auth) package — plain HTML/CSS, one inline
+`<script>` for the waitlist form's fetch call, no build step.
+
+- `GET /` — the landing page (`app/public/templates/landing.html`):
+  positioning pulled straight from `docs/product-one-pager.md` ("kazandırmazsak
+  ödemezsiniz"), a 3-step how-it-works, and the waitlist form.
+- `POST /waitlist` — `{email, phone?, note?, source?}` -> upserts a
+  `WaitlistSignup` by `email` (resubmitting updates the row, never `409`s
+  as "already on the list" — the point is to capture the latest signal,
+  not gatekeep repeat visits).
+- `GET /waitlist/thanks` — plain confirmation page.
+- `/admin/waitlist` — list view (email/phone/note/source/date), same
+  `REVIEW_TOKEN` Basic auth as the rest of `/admin`.
+
+`app/channels/optin.py`'s opt-in landing page (Package H) shares this same
+`app/public/templates/` directory — same "public, no auth, Jinja" shape,
+different route.
 
 ## Operator panel (`app/admin/`)
 

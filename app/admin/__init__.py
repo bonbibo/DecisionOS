@@ -26,7 +26,16 @@ from app.config import get_settings
 from app.database import get_db
 from app.engine import load_tactics
 from app.llm import AnthropicSubagentClient
-from app.models import AudienceEnum, Case, ChannelEnum, LLMCall, OutboundQueueItem, OutboundStatusEnum, Payment
+from app.models import (
+    AudienceEnum,
+    Case,
+    ChannelEnum,
+    LLMCall,
+    OutboundQueueItem,
+    OutboundStatusEnum,
+    Payment,
+    WaitlistSignup,
+)
 from app.orchestrator import resume_after_escalation, status_message_for
 from app.payments import (
     PreAuthRequiredError,
@@ -284,3 +293,9 @@ def payment_cancel_override(
         raise HTTPException(status_code=409, detail="nothing to cancel (no pre-authorized payment)")
     db.commit()
     return RedirectResponse(url=f"/admin/cases/{case_id}", status_code=303)
+
+
+@router.get("/waitlist", response_class=HTMLResponse)
+def waitlist_list(request: Request, operator: str = Depends(require_admin_auth), db: Session = Depends(get_db)):
+    signups = db.execute(select(WaitlistSignup).order_by(WaitlistSignup.created_at.desc())).scalars().all()
+    return templates.TemplateResponse(request, "waitlist.html", {"signups": signups, "operator": operator})
