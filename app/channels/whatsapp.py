@@ -42,7 +42,7 @@ from app.models import (
     StateEnum,
     User,
 )
-from app.orchestrator import TurnResult, run_turn
+from app.orchestrator import TurnResult, run_turn, status_message_for
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -122,18 +122,6 @@ async def _route_inbound_message(db: Session, message: dict) -> None:
         await _handle_intake_message(db, sender, text, message)
 
 
-def _status_message_for(result: TurnResult, case: Case) -> str:
-    if result.status == "escalated":
-        return (
-            "Görüşmede bir noktayı ekibimize danışıyoruz, kısa süre içinde güncelleme geleceğiz. / "
-            "We're checking one detail with our team on your negotiation — an update is coming shortly."
-        )
-    return (
-        f"Görüşme devam ediyor ({case.state.value}). Yeni gelişme oldu, onayınızı bekliyoruz. / "
-        f"Negotiation in progress ({case.state.value}). There's a new development awaiting your review."
-    )
-
-
 def _handle_negotiation_message(db: Session, case: Case, sender: str, text: str, raw_message: dict) -> None:
     record_message(
         case,
@@ -177,7 +165,7 @@ def _handle_negotiation_message(db: Session, case: Case, sender: str, text: str,
                 case=case,
                 channel=ChannelEnum.whatsapp,
                 recipient=case.user.phone,
-                message=_status_message_for(result, case),
+                message=status_message_for(result, case),
                 status=OutboundStatusEnum.pending_approval,
                 audience=AudienceEnum.client,
             )

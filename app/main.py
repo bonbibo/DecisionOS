@@ -4,7 +4,8 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.channels import email, whatsapp
+from app.admin import router as admin_router
+from app.channels import email, web, whatsapp
 from app.config import get_settings
 from app.database import get_db
 from app.models import Case
@@ -18,7 +19,9 @@ app = FastAPI(title="DecisionOS Negotiation Agent", version="0.1.0")
 
 app.include_router(whatsapp.router)
 app.include_router(email.router)
+app.include_router(web.router)
 app.include_router(review_router)
+app.include_router(admin_router)
 
 
 @app.get("/health")

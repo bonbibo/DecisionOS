@@ -1,0 +1,34 @@
+{% extends "_base.html" %}
+{% block title %}Vaka {{ case.id }} — DecisionOS{% endblock %}
+{% block content %}
+<h1>{{ case.counterparty_name or case.counterparty_contact }}
+  {% if case.escalated %}<span class="badge">eskale</span>{% endif %}</h1>
+<p>
+  Dikey: {{ case.vertical or "-" }} &middot;
+  Kanal: {{ case.channel.value }} &middot;
+  Aşama: {{ case.state.value }} &middot;
+  Hedef: {{ case.target_price or "-" }} &middot;
+  Taban: {{ case.min_acceptable_price or "-" }} &middot;
+  Tavan: {{ case.max_price or "-" }}
+</p>
+{% if case.escalation_reason %}<p><strong>Eskalasyon nedeni:</strong> {{ case.escalation_reason }}</p>{% endif %}
+
+<h2>Plan</h2>
+<pre>{{ case.plan or "-" }}</pre>
+
+<h2>Mesajlar</h2>
+<table>
+<tr><th>Yön</th><th>İçerik</th><th>Tarih</th></tr>
+{% for m in case.messages %}
+<tr><td>{{ m.direction.value }}</td><td>{{ m.content }}</td><td>{{ m.created_at }}</td></tr>
+{% endfor %}
+</table>
+
+<h2>Teklifler</h2>
+<table>
+<tr><th>Tur</th><th>Taraf</th><th>Fiyat</th><th>Para Birimi</th><th>Tarih</th></tr>
+{% for o in case.offers %}
+<tr><td>{{ o.round_number }}</td><td>{{ o.actor.value }}</td><td>{{ o.price }}</td><td>{{ o.currency }}</td><td>{{ o.created_at }}</td></tr>
+{% endfor %}
+</table>
+{% endblock %}

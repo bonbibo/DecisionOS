@@ -1,0 +1,47 @@
+{% extends "_base.html" %}
+{% block title %}Onay Bekleyenler — DecisionOS{% endblock %}
+{% block content %}
+<h1>Onay Bekleyen Mesajlar ({{ items|length }})</h1>
+{% if not items %}
+<p>Onay bekleyen mesaj yok.</p>
+{% endif %}
+<table>
+<tr>
+  <th>Vaka</th>
+  <th>Hedef Kitle</th>
+  <th>Kanal</th>
+  <th>Alıcı</th>
+  <th>Mesaj</th>
+  <th>Taktik</th>
+  <th>Durum</th>
+  <th>İşlem</th>
+</tr>
+{% for item in items %}
+<tr class="{{ 'escalated' if item.case.escalated else '' }}">
+  <td><a href="/admin/cases/{{ item.case_id }}">{{ item.case.counterparty_name or item.case_id }}</a>
+    {% if item.case.escalated %}<span class="badge">eskale</span>{% endif %}</td>
+  <td>{{ item.audience.value }}</td>
+  <td>{{ item.channel.value }}</td>
+  <td>{{ item.recipient }}</td>
+  <td>{{ item.message }}</td>
+  <td>{{ item.tactic_used or "-" }}</td>
+  <td>{{ item.status.value }}</td>
+  <td>
+    <form class="inline" method="post" action="/admin/queue/{{ item.id }}/approve">
+      <button type="submit">Onayla &amp; Gönder</button>
+    </form>
+    <details>
+      <summary>Düzenle</summary>
+      <form method="post" action="/admin/queue/{{ item.id }}/edit">
+        <textarea name="message">{{ item.message }}</textarea>
+        <button type="submit">Kaydet</button>
+      </form>
+    </details>
+    <form class="inline" method="post" action="/admin/queue/{{ item.id }}/reject">
+      <button type="submit">Reddet</button>
+    </form>
+  </td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

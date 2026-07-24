@@ -33,6 +33,7 @@ class StateEnum(str, enum.Enum):
 class ChannelEnum(str, enum.Enum):
     whatsapp = "whatsapp"
     email = "email"
+    web = "web"
 
 
 class DirectionEnum(str, enum.Enum):
@@ -75,8 +76,13 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     phone: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     locale: Mapped[str] = mapped_column(String(10), nullable=False, default="tr")
+
+    # Bearer token for POST /web/chat, issued by POST /web/register. V1 has no
+    # email/phone verification — registering is enough. See app/channels/web.py.
+    web_session_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
 
     # In-progress intake brief: {collected_fields, missing_fields, ready,
     # awaiting_confirmation}. Cleared once a Case is created. See app/intake.py.

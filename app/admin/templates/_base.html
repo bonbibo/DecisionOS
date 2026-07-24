@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}DecisionOS Operatör Paneli{% endblock %}</title>
+<style>
+  body { font-family: -apple-system, sans-serif; margin: 2rem; background: #f7f7f8; color: #1a1a1a; }
+  nav a { margin-right: 1rem; }
+  table { border-collapse: collapse; width: 100%; margin-top: 1rem; background: #fff; }
+  th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  .escalated { background: #fde2e2; }
+  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; background: #eee; font-size: 0.85em; }
+  form.inline { display: inline; }
+  textarea { width: 100%; min-height: 4rem; }
+  button { cursor: pointer; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/admin">Onay Bekleyenler</a>
+  <a href="/admin/cases">Vakalar</a>
+  <a href="/admin/costs">LLM Kullanımı</a>
+  <span style="float:right">operatör: {{ operator }}</span>
+</nav>
+<hr>
+{% block content %}{% endblock %}
+</body>
+</html>

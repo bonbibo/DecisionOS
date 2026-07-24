@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models import ChannelEnum, OutboundStatusEnum, StateEnum
+from app.models import ActorEnum, ChannelEnum, DirectionEnum, OutboundStatusEnum, StateEnum
 
 
 class CaseCreate(BaseModel):
@@ -65,3 +65,56 @@ class ReviewEditRequest(BaseModel):
 
 class ReviewRejectRequest(BaseModel):
     reviewed_by: str | None = None
+
+
+class WebRegisterRequest(BaseModel):
+    email: str
+    phone: str
+    name: str | None = None
+
+
+class WebRegisterResponse(BaseModel):
+    user_id: uuid.UUID
+    session_token: str
+
+
+class WebChatRequest(BaseModel):
+    message: str
+
+
+class WebChatResponse(BaseModel):
+    reply: str
+    case_id: uuid.UUID | None = None
+    state: StateEnum | None = None
+    escalated: bool = False
+
+
+class TimelineMessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    direction: DirectionEnum
+    content: str
+    created_at: datetime
+
+
+class TimelineOfferRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    actor: ActorEnum
+    round_number: int
+    price: float
+    currency: str
+    created_at: datetime
+
+
+class CaseTimelineRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    state: StateEnum
+    escalated: bool
+    escalation_reason: str | None
+    messages: list[TimelineMessageRead]
+    offers: list[TimelineOfferRead]

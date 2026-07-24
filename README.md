@@ -28,13 +28,17 @@ app/
   channels/
     whatsapp.py          Meta Cloud API webhook — routes to intake or run_turn()
     email.py              Gmail API (send + Pub/Sub push) stub
+    web.py                 POST /web/register|chat, GET /web/case/{id}/timeline
+  admin/
+    __init__.py            /admin operator panel (Basic auth via REVIEW_TOKEN)
+    templates/              Jinja templates for the panel
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
   update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
 tests/                   pytest suite (state machine, VaultReader + legacy vault
                             loaders, subagents, orchestrator, LLM client, intake,
-                            webhook + review flow)
+                            webhook + review flow, web channel + admin panel)
 ```
 
 ## State machine
@@ -422,16 +426,112 @@ panel — the queue table doesn't care who calls it, as long as they have the to
   `send_email` helper. History syncing (`_sync_new_messages`) and dispatch
   into `run_turn` are left as follow-up work (mirroring the WhatsApp wiring
   above once there's an email vertical to test against).
+- **Web** (`app/channels/web.py`): our own customers talking to the agent
+  directly through a browser instead of WhatsApp, with a synchronous
+  request/response shape instead of a webhook:
+  - `POST /web/register` — `{email, phone, name}` -> creates (or, for a
+    phone that already exists, e.g. from a prior WhatsApp contact, reuses)
+    a `User` and issues a bearer `session_token`
+    (`User.web_session_token`, random 32-byte URL-safe token). V1 has no
+    email/phone verification, same trust model as WhatsApp: whoever holds
+    the token is treated as that phone's owner.
+  - `POST /web/chat` — `Authorization: Bearer <session_token>`, body
+    `{message}`. Routing mirrors WhatsApp but keyed by the authenticated
+    `User` instead of a phone number (`Case.user_id == user.id` and
+    `state != close`, rather than matching `counterparty_contact`, since
+    the web session identifies our customer, not the counterparty):
+    active case -> `run_turn`; no active case -> `run_intake_turn`. The
+    counterparty-facing draft (if `APPROVE`d) is still queued in
+    `outbound_queue` (`audience=counterparty`, `channel=whatsapp` — the
+    counterparty is only ever reached over WhatsApp, regardless of which
+    channel our customer used) for the unchanged human-approval flow. The
+    client-facing status update is **not** queued here: this channel is
+    synchronous, so `app.orchestrator.status_message_for()` (the same
+    helper WhatsApp queues as `audience=client`) is returned inline as the
+    HTTP response's `reply` instead.
+  - `GET /web/case/{id}/timeline` — same bearer auth; 404s if the case
+    isn't the caller's own. Returns current `state`/`escalated` plus the
+    case's `messages` and `offers` logs (there's no separate
+    state-transition history table, so the timeline is reconstructed from
+    those two logs rather than a dedicated audit trail).
+
+## Operator panel (`app/admin/`)
+
+A small server-rendered Jinja UI at `/admin` for the same human-in-the-loop
+queue `app/review.py` exposes over REST — for a person who'd rather click
+through a page than call the API by hand. Protected by HTTP Basic auth
+checked against the same `REVIEW_TOKEN` (`/review/*` compares it as a
+Bearer token; `/admin` compares it as the Basic password — same credential,
+two auth schemes). It deliberately duplicates `review.py`'s small
+approve/edit/reject state-transition logic rather than importing/refactoring
+it, so `review.py`'s tested REST contract stays untouched.
+
+- `/admin` — every `outbound_queue` item still `pending_approval`/`edited`,
+  across all cases, with inline **Onayla & Gönder** / **Düzenle** /
+  **Reddet** actions; escalated cases' rows are visually flagged.
+  Approving here calls `whatsapp.send_text_message` directly, exactly like
+  `POST /review/{id}/approve`.
+- `/admin/cases`, `/admin/cases/{id}` — case list and a detail/timeline
+  view (plan, messages, offers), escalated cases highlighted.
+- `/admin/costs` — `llm_calls` usage rollups (call count, input/output
+  tokens, average latency), grouped per case and per subagent role/model.
+  No dollar figures are computed here — the codebase doesn't hardcode a
+  $/token rate table, so this stays an honest token/latency view rather
+  than a fabricated cost estimate.
+
+## Öğrenme Mimarisi
+
+This closes out the "Vault-Driven Decision Engine" system update (PR-A
+through PR-E, landed as sequential commits on this branch/PR): the system's
+negotiation knowledge — pricing, tactics, playbooks, architecture decisions,
+customer segments — lives in `vault/` as editable notes, not hardcoded in
+`app/`, and every subagent call reads that vault fresh through one gateway.
+
+- **PR-A — `VaultReader` + `_manifest.md`.** One gateway (`app/vault.py`)
+  onto all vault content; role -> folder scope is declared data
+  (`vault/_manifest.md`), not a Python `if`. Hot-reload, no caching:
+  editing a note changes the next turn's subagent payload with no deploy.
+- **PR-B — Pricing (`07-Fiyatlama/`).** The engine validates the LLM's
+  `fee_offer` against the vault's pricing frontmatter by exact comparison
+  (`app.intake._fee_mismatch`) rather than trusting or regex-scraping the
+  model's free text — one revision retry, then escalate on a persistent
+  mismatch. `Case.is_demo` gates access to non-`aktif` (`demo`) pricing.
+- **PR-C — Decisions (`06-Kararlar/`).** Architecture/product decisions are
+  vault notes (ADR-style, `vault/_sablonlar/karar-sablonu.md`), which
+  Stratejist and Kritik are scoped to read; `exclude_inactive_decisions()`
+  keeps anything not `durum: aktif` out of subagent payloads automatically.
+- **PR-D — Customer segments (`08-Musteri-Profilleri/`).** `SEGMENT`
+  (S1/S2/S3, from `UserMemory`) rides alongside every Stratejist call,
+  calibrating the plan to who our own customer is — kept deliberately
+  distinct from `04-Karsi-Taraf`'s counterparty archetypes (A1/A2/A3),
+  since Analist reads both and they answer different questions.
+- **PR-E — Web channel + operator panel.** A second, synchronous customer
+  channel (`app/channels/web.py`) reusing the same `run_turn`/
+  `run_intake_turn` orchestration WhatsApp uses, plus a server-rendered
+  `/admin` panel (`app/admin/`) over the same human-approval queue
+  `app/review.py` exposes as REST — two front doors onto one engine, no
+  duplicated negotiation logic.
+
+No negotiation-domain constant (a fee percentage, a tactic, a segment
+definition, a decision) is hardcoded in `app/` — every one of those is read
+from `vault/` at call time. Test count has not regressed at any point across
+PR-A through PR-E (98 -> 112 as tests were *added*, never removed to make a
+change pass).
 
 ## Status
 
-Models, migrations, the state machine, vault loaders, the subagent
+Models, migrations, the state machine, the vault-driven engine (pricing,
+decisions, segments — see Öğrenme Mimarisi above), the subagent
 orchestration loop (including intake/onboarding), a real Anthropic-backed
-`SubagentClient` with cost logging, and the full WhatsApp
-intake-or-negotiation routing -> human-approval -> send loop are wired up
-end to end, with the webhook and review endpoints both authenticated
-(signature verification / bearer token respectively). Still open: the
-Gmail channel's `run_turn`/intake dispatch, multi-channel sending in
-`POST /review/{id}/approve` (WhatsApp only today), and auth/identity on the
-intake side (any WhatsApp number can start a case — reasonable for a public
-onboarding flow, but worth a deliberate look before scaling pilots).
+`SubagentClient` with cost logging, and the full WhatsApp + web
+intake-or-negotiation routing -> human-approval -> send loop (via
+`POST /review/*` or the `/admin` panel) are wired up end to end, with every
+inbound/write surface authenticated (WhatsApp signature verification,
+`REVIEW_TOKEN` bearer/Basic auth on review + admin, web session tokens).
+Still open: the Gmail channel's `run_turn`/intake dispatch, multi-channel
+sending in `POST /review/{id}/approve` (WhatsApp only today — a web-origin
+case's counterparty draft is still queued as `channel=whatsapp`, since the
+counterparty side has no web presence), and auth/identity on the intake
+side (any WhatsApp number or `{email, phone}` pair can start a case —
+reasonable for a public onboarding flow, but worth a deliberate look before
+scaling pilots).

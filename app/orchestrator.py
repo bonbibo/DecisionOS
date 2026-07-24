@@ -223,3 +223,18 @@ def _escalate(case: Case, result: TurnResult) -> TurnResult:
     case.escalated = True
     case.escalation_reason = result.escalation_reason
     return result
+
+
+def status_message_for(result: TurnResult, case: Case) -> str:
+    """A short client-facing status update for one run_turn() result — shown to
+    our own customer (not the counterparty), either queued (WhatsApp) or
+    returned inline (web). See app.channels.whatsapp and app.channels.web."""
+    if result.status == "escalated":
+        return (
+            "Görüşmede bir noktayı ekibimize danışıyoruz, kısa süre içinde güncelleme geleceğiz. / "
+            "We're checking one detail with our team on your negotiation — an update is coming shortly."
+        )
+    return (
+        f"Görüşme devam ediyor ({case.state.value}). Yeni gelişme oldu, onayınızı bekliyoruz. / "
+        f"Negotiation in progress ({case.state.value}). There's a new development awaiting your review."
+    )
