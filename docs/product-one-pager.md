@@ -50,8 +50,8 @@ Sabit giderler: hosting ~$50/ay, market intel API (V2) ~$200-500/ay.
 
 ## Yol haritası
 
-- **Şimdi:** motor hazır (50/50 test), sandbox uçtan uca test
-- **+2 hafta:** intake chat ajanı + kullanıcı hafızası → 5 ücretsiz pilot
+- **Şimdi:** motor + intake hazır (66/66 test), deploy + sandbox uçtan uca test sırada
+- **+2 hafta:** 5 ücretsiz pilot
 - **+1 ay:** 20 ücretli vaka, birim ekonomi doğrulama
 - **+3 ay:** güven skorlu yarı-otomatik onay, abonelik lansmanı
 - **+6 ay:** Dikey 2 (BAE araç veya sağlık faturası) — playbook motoru dikey-bağımsız tasarlandı
