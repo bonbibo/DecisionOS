@@ -105,9 +105,12 @@ vault/
     kira-bae.md              playbook note (anchor strategy, concession ladder, red lines)
     taktikler/
       TK-001-*.md, TK-002-*.md, TK-003-*.md   tactic notes
-  02-Cases/, 03-Retros/, 04-Karsi-Taraf/, 05-Metrikler/   (case log / retro / counterparty
-                                                             archetype / metrics folders — currently
-                                                             empty placeholders, to be filled in per case)
+  02-Cases/                  case log (filled in per case; empty for now)
+  03-Retros/                 post-case retros (filled in by the Kütüphaneci agent per case)
+  04-Karsi-Taraf/
+    profiller.md              counterparty archetypes (## <id> — <name> sections, no frontmatter)
+  05-Metrikler/
+    dashboard.md               win-rate / tactic-score dashboard — regenerated, not hand-edited
   _sablonlar/                 templates for new tactic / retro notes
 ```
 
@@ -128,6 +131,31 @@ engine.available_tactics()               # active tactics matching case.vertical
 `available_tactics()` filters the loaded tactics to the case's current
 negotiation stage (`discovery`/`anchoring`/`counter`/`concession`/`close`)
 and ranks them by `basari_orani` (success rate).
+
+### Counterparty profiles
+
+`load_profiles()` parses `vault/04-Karsi-Taraf/*.md` into `CounterpartyProfile`
+records — one per `## <id> — <name>` section (these notes have no per-archetype
+frontmatter). Intended for the Analist subagent's counterparty classification:
+
+```python
+from app.engine import load_profiles
+
+for profile in load_profiles("vault"):
+    print(profile.profile_id, profile.ad)   # e.g. "A1 Kurumsal yönetim şirketi"
+```
+
+### Metrics dashboard
+
+`vault/05-Metrikler/dashboard.md` is generated, not hand-edited. It's derived
+from `vault/03-Retros/*.md` frontmatter (case outcomes, savings, round counts)
+and `vault/01-Playbooks/taktikler/*.md` frontmatter (per-tactic usage/success
+counts). After the Kütüphaneci agent files a retro or updates a tactic's
+score, regenerate it with:
+
+```bash
+python scripts/update_metrics.py
+```
 
 ## Channel stubs
 

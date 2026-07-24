@@ -147,6 +147,89 @@ def tactics_for_stage(tactics: list[Tactic], dikey: str, asama: StateEnum) -> li
     return sorted(matches, key=lambda t: t.basari_orani, reverse=True)
 
 
+_PROFILE_HEADING_RE = re.compile(r"^##\s+(\S+)\s+—\s+(.+)$", re.MULTILINE)
+
+
+@dataclass
+class CounterpartyProfile:
+    """A counterparty archetype loaded from a vault/04-Karsi-Taraf/*.md note.
+
+    Profile notes have no per-archetype frontmatter; each archetype is a
+    ``## <id> — <name>`` section within the file (e.g. ``## A1 — Kurumsal
+    yönetim şirketi``), used by the Analist subagent to classify the other
+    side of a negotiation.
+    """
+
+    profile_id: str
+    ad: str
+    body: str
+    source_path: Path
+
+
+def load_profiles(vault_dir: Path | str = "vault") -> list[CounterpartyProfile]:
+    """Parse counterparty archetype sections from vault/04-Karsi-Taraf/*.md."""
+    profiles_dir = Path(vault_dir) / "04-Karsi-Taraf"
+    profiles = []
+    for path in sorted(profiles_dir.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        headings = list(_PROFILE_HEADING_RE.finditer(text))
+        for i, heading in enumerate(headings):
+            start = heading.end()
+            end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
+            profiles.append(
+                CounterpartyProfile(
+                    profile_id=heading.group(1),
+                    ad=heading.group(2).strip(),
+                    body=text[start:end].strip(),
+                    source_path=path,
+                )
+            )
+    return profiles
+
+
+@dataclass
+class Retro:
+    """A post-case retrospective loaded from a vault/03-Retros/*.md note."""
+
+    retro_id: str
+    case: str
+    sonuc: str
+    tasarruf: float
+    tasarruf_para_birimi: str
+    tur_sayisi: int
+    sure_gun: int
+    yazan: str
+    guncelleme: str
+    body: str
+    source_path: Path
+
+
+def load_retros(vault_dir: Path | str = "vault") -> list[Retro]:
+    """Parse every retro note under vault/03-Retros/*.md."""
+    retros_dir = Path(vault_dir) / "03-Retros"
+    retros = []
+    for path in sorted(retros_dir.glob("*.md")):
+        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        if "retro_id" not in meta:
+            continue
+        retros.append(
+            Retro(
+                retro_id=meta["retro_id"],
+                case=str(meta.get("case", "")),
+                sonuc=meta.get("sonuc", ""),
+                tasarruf=float(meta.get("tasarruf", 0) or 0),
+                tasarruf_para_birimi=meta.get("tasarruf_para_birimi", ""),
+                tur_sayisi=int(meta.get("tur_sayisi", 0) or 0),
+                sure_gun=int(meta.get("sure_gun", 0) or 0),
+                yazan=meta.get("yazan", ""),
+                guncelleme=str(meta.get("guncelleme", "")),
+                body=body,
+                source_path=path,
+            )
+        )
+    return retros
+
+
 class NegotiationEngine:
     """Wraps a single Case and enforces valid state transitions on it."""
 
