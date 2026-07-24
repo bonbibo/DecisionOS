@@ -8,10 +8,12 @@ Kritik approves the draft — queued in outbound_queue for human approval.
 Nothing is ever sent automatically; only POST /review/{id}/approve sends.
 """
 
+import hashlib
+import hmac
 import logging
 
 import httpx
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -44,9 +46,23 @@ def verify_webhook(
     return Response(status_code=status.HTTP_403_FORBIDDEN)
 
 
+def _has_valid_signature(body: bytes, signature_header: str | None) -> bool:
+    """Verify Meta's X-Hub-Signature-256 header (HMAC-SHA256 of the raw body
+    keyed with WHATSAPP_APP_SECRET) so only Meta can feed us events."""
+    if not signature_header or not signature_header.startswith("sha256="):
+        return False
+    expected = hmac.new(settings.whatsapp_app_secret.encode(), body, hashlib.sha256).hexdigest()
+    provided = signature_header.removeprefix("sha256=")
+    return hmac.compare_digest(expected, provided)
+
+
 @router.post("/webhook")
 async def receive_webhook(request: Request, db: Session = Depends(get_db)) -> dict:
     """Inbound WhatsApp events (messages, statuses, etc.)."""
+    body = await request.body()
+    if not _has_valid_signature(body, request.headers.get("x-hub-signature-256")):
+        raise HTTPException(status_code=401, detail="invalid webhook signature")
+
     payload = await request.json()
 
     for entry in payload.get("entry", []):

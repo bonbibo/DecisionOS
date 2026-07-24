@@ -2,21 +2,31 @@
 
 Every draft run_turn approves lands in outbound_queue as pending_approval —
 nothing is sent automatically. A human calls one of these three endpoints;
-only approve actually sends (currently WhatsApp only).
+only approve actually sends (currently WhatsApp only). Every endpoint here
+requires `Authorization: Bearer <REVIEW_TOKEN>` — anyone who finds the
+deployed URL can otherwise approve/send on the agent's behalf.
 """
 
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from app.channels import whatsapp
+from app.config import get_settings
 from app.database import get_db
 from app.models import ChannelEnum, OutboundQueueItem, OutboundStatusEnum
 from app.schemas import OutboundQueueRead, ReviewApproveRequest, ReviewEditRequest, ReviewRejectRequest
 
-router = APIRouter(prefix="/review", tags=["review"])
+
+def require_review_token(authorization: str | None = Header(default=None)) -> None:
+    expected = f"Bearer {get_settings().review_token}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="missing or invalid bearer token")
+
+
+router = APIRouter(prefix="/review", tags=["review"], dependencies=[Depends(require_review_token)])
 
 _ACTIONABLE_STATUSES = {OutboundStatusEnum.pending_approval, OutboundStatusEnum.edited}
 

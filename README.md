@@ -250,20 +250,28 @@ the WhatsApp webhook writes the draft into `outbound_queue` with status
   (still requires a follow-up `approve` to actually send).
 - `POST /review/{id}/reject` — status -> `rejected`, never sent.
 
-This is a deliberately simple V1: plain REST, no auth, no UI. A future
-version could drive the same three endpoints from a second WhatsApp bot
-number instead of a web panel — the queue table doesn't care who calls it.
+This is a deliberately simple V1: plain REST, no UI, but **not** unauthenticated
+— every `/review/*` request requires `Authorization: Bearer <REVIEW_TOKEN>`
+(set in `.env`; generate a real random value, e.g. `openssl rand -hex 32`,
+before deploying). Anyone with the token can approve/send on the agent's
+behalf, so treat it like any other credential. A future version could drive
+the same three endpoints from a second WhatsApp bot number instead of a web
+panel — the queue table doesn't care who calls it, as long as they have the token.
 
 ## Channels
 
 - **WhatsApp** (`app/channels/whatsapp.py`): the webhook verification
-  handshake (`GET`) is unchanged. The inbound handler (`POST`) now does the
-  real thing: match the sender's phone number to their active (non-`close`)
-  `Case`, log and drop the message if none matches ("unknown sender"),
-  append it to `Case.messages`, build the last 10 messages as `thread`, load
-  fresh `tactics`/`profiles` from `vault/`, and run
-  `app.orchestrator.run_turn`. An `APPROVE`d draft goes to `outbound_queue`
-  (see above) — nothing is sent from inside the webhook handler itself.
+  handshake (`GET`) is unchanged. The inbound handler (`POST`) first verifies
+  Meta's `X-Hub-Signature-256` header — an HMAC-SHA256 of the raw request
+  body keyed with `WHATSAPP_APP_SECRET` — and rejects with `401` if it's
+  missing or doesn't match, so only Meta (or someone who has the app secret)
+  can feed us events. Once verified, it does the real thing: match the
+  sender's phone number to their active (non-`close`) `Case`, log and drop
+  the message if none matches ("unknown sender"), append it to
+  `Case.messages`, build the last 10 messages as `thread`, load fresh
+  `tactics`/`profiles` from `vault/`, and run `app.orchestrator.run_turn`. An
+  `APPROVE`d draft goes to `outbound_queue` (see above) — nothing is sent
+  from inside the webhook handler itself.
 - **Email** (`app/channels/email.py`): still a stub. Gmail API client built
   from an OAuth2 refresh token, a Pub/Sub push receiver
   (`POST /channels/email/webhook`) for `users.watch()` notifications, and a
@@ -276,7 +284,7 @@ number instead of a web panel — the queue table doesn't care who calls it.
 Models, migrations, the state machine, vault loaders, the subagent
 orchestration loop, a real Anthropic-backed `SubagentClient` with cost
 logging, and the full WhatsApp inbound -> `run_turn` -> human-approval ->
-send loop are wired up end to end. Still open: the Gmail channel's
-`run_turn` dispatch, authentication on the review endpoints (currently
-unauthenticated REST), and multi-channel sending in `POST /review/{id}/approve`
-(WhatsApp only today).
+send loop are wired up end to end, with the webhook and review endpoints
+both authenticated (signature verification / bearer token respectively).
+Still open: the Gmail channel's `run_turn` dispatch, and multi-channel
+sending in `POST /review/{id}/approve` (WhatsApp only today).

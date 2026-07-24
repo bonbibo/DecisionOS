@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     model_analist: str = "claude-haiku-4-5-20251001"
     model_kritik: str = "claude-haiku-4-5-20251001"
 
+    # Bearer token required on every /review/* request (see app/review.py).
+    review_token: str = "change-me"
+
 
 @lru_cache
 def get_settings() -> Settings:
