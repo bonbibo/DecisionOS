@@ -50,6 +50,17 @@ class VaultContext:
     documents: list[VaultDocument] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
+    def exclude_inactive_decisions(self) -> "VaultContext":
+        """A copy with any vault/06-Kararlar/*.md note dropped unless it's
+        `durum: aktif` — a draft or cancelled decision shouldn't influence a
+        live subagent call, even if its folder is in the caller's manifest scope."""
+        kept = [
+            d
+            for d in self.documents
+            if not d.path.startswith("06-Kararlar/") or (d.frontmatter or {}).get("durum") == "aktif"
+        ]
+        return VaultContext(documents=kept, warnings=list(self.warnings))
+
     def to_dict(self) -> dict:
         """JSON-serializable form for embedding in a subagent payload."""
         return {

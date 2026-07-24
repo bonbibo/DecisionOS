@@ -20,6 +20,12 @@ from app.vault import VaultReader
 INTAKE_VERTICAL = "kira-bae"
 MAX_FEE_REVISIONS = 1
 
+
+def _vault_block(role: SubagentRole, vault_dir: str = "vault") -> dict:
+    """Everything vault/_manifest.md assigns `role`, ready to embed in its payload."""
+    context = VaultReader(vault_dir).read_for_role(role.value)
+    return context.exclude_inactive_decisions().to_dict()
+
 CONFIRMATION_WORDS = {
     "evet",
     "onaylıyorum",
@@ -125,7 +131,7 @@ def _confirm_and_create_case(
                 "TACTICS": [t.taktik_id for t in tactics],
                 "INTEL": {},
                 "PROFILE": {},
-                "VAULT": VaultReader(vault_dir).read_for_role(SubagentRole.stratejist.value).to_dict(),
+                "VAULT": _vault_block(SubagentRole.stratejist, vault_dir),
             },
         )
     except SubagentEscalated as exc:
@@ -157,7 +163,7 @@ def run_intake_turn(
     if state.get("awaiting_confirmation") and _is_confirmation(incoming_message):
         return _confirm_and_create_case(user, client, tactics, vault_dir)
 
-    vault_context = VaultReader(vault_dir).read_for_role(SubagentRole.intake.value).to_dict()
+    vault_context = _vault_block(SubagentRole.intake, vault_dir)
     pricing = _select_pricing(vault_context["documents"], INTAKE_VERTICAL)
 
     revision_note = None

@@ -30,7 +30,8 @@ MAX_REJECT_REPLANS = 1
 
 def _vault_block(role: SubagentRole, vault_dir: str = "vault") -> dict:
     """Everything vault/_manifest.md assigns `role`, ready to embed in its payload."""
-    return VaultReader(vault_dir).read_for_role(role.value).to_dict()
+    context = VaultReader(vault_dir).read_for_role(role.value)
+    return context.exclude_inactive_decisions().to_dict()
 
 
 @dataclass

@@ -150,7 +150,9 @@ vault/
     profiller.md              counterparty archetypes (## <id> — <name> sections, no frontmatter)
   05-Metrikler/
     dashboard.md               win-rate / tactic-score dashboard — regenerated, not hand-edited
-  06-Kararlar/                architecture decision records (placeholder — content lands in a later PR)
+  06-Kararlar/
+    KR-001-fiyatlama-modeli.md   pricing model decision (durum: aktif)
+    KR-002-dikey-sirasi.md       vertical rollout order decision (durum: aktif)
   07-Fiyatlama/
     kira-bae.md                pricing model (`durum: aktif`) — success fee % / min fee / flat alternative
     arac-bae.md                second-vertical demo pricing (`durum: demo`) — not offered to real customers
@@ -166,6 +168,20 @@ merge is the only path for the vault to change.
 `DeprecationWarning`-emitting wrappers over `VaultReader` (kept for
 call-site compatibility); `load_tactics()`/`load_retros()` still read
 directly for now — natural follow-ups to migrate onto `VaultReader` too.
+
+### Decisions (`06-Kararlar/`)
+
+Architecture/product decisions are vault notes, not code comments — start
+from `vault/_sablonlar/karar-sablonu.md` (`karar_id`, `durum`,
+`etki_alani`, `gozden_gecirme` frontmatter). `stratejist` and `kritik` are
+the two manifest roles scoped to `06-Kararlar/` (Kritik's checklist item 8:
+does this draft contradict an active decision? → `REVISE`; Stratejist:
+don't produce a plan contradicting one, flag any tension in `rationale`).
+`VaultContext.exclude_inactive_decisions()` drops any `06-Kararlar/*.md`
+note that isn't `durum: aktif` before it reaches a subagent payload — a
+`taslak`/`iptal`/`gozden-gecirilecek` decision is vault history, not live
+context. Every other folder is passed through untouched; this filter is
+`06-Kararlar/`-specific, not a generic `durum` filter.
 
 Each tactic note has YAML frontmatter (`taktik_id`, `dikey`, `asama`,
 `durum`, `basari_orani`, `risk`, ...). `app/engine.py` parses these directly:
