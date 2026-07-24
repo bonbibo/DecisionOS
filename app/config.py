@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # HTTP request to derive it from in those contexts.
     public_base_url: str = "http://localhost:8000"
 
+    # If set, scripts/daily_report.py emails the report here in addition to
+    # writing reports/YYYY-MM-DD.md. Unset (None) = file only, no error.
+    ops_email: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

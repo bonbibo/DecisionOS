@@ -9,3 +9,4 @@ venv/
 htmlcov/
 *.db
 .DS_Store
+reports/

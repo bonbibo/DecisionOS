@@ -90,6 +90,12 @@ class VaultReader:
             return {}
         return roles
 
+    def manifest_roles(self) -> dict[str, list[str]]:
+        """Public read of the role -> folder mapping — {} if the manifest is
+        missing/empty (graceful degradation, not an exception). Used by
+        app.health's deep healthcheck to confirm the vault is readable at all."""
+        return self._read_manifest_roles()
+
     def read_for_role(self, role: str) -> VaultContext:
         """Read every document across all folders assigned to `role` in the manifest."""
         roles = self._read_manifest_roles()

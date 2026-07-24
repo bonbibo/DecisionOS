@@ -42,11 +42,17 @@ app/
   public/
     __init__.py             GET /, POST /waitlist, GET /waitlist/thanks
     templates/               Shared with app/channels/optin.py
+  health.py                Deep healthcheck (DB/vault/Stripe) — Package J
+  logging_utils.py          JSON logging + request-id middleware — Package J
+  reports.py                Daily ops report aggregation — Package J
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
   update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
   run_intel.py               Regenerates vault/09-Piyasa-Verisi/*.md (daily cron)
+  daily_report.py             Writes reports/YYYY-MM-DD.md (+ emails OPS_EMAIL)
+docs/
+  RUNBOOK.md                Deploy/rollback/incident-response reference
 tests/                   pytest suite (state machine, VaultReader + legacy vault
                             loaders, subagents, orchestrator, LLM client, intake,
                             webhook + review flow, web channel + admin panel, market intel)
@@ -683,6 +689,43 @@ it, so `review.py`'s tested REST contract stays untouched.
   No dollar figures are computed here — the codebase doesn't hardcode a
   $/token rate table, so this stays an honest token/latency view rather
   than a fabricated cost estimate.
+
+## Üretim (`app/health.py`, `app/logging_utils.py`, `app/reports.py`)
+
+Closes `docs/MASTER-SPEC-v3.md` Package J.
+
+- **Structured logging**: every log line is one JSON object
+  (`time`/`level`/`logger`/`message`/`request_id`) — `app.logging_utils.
+  configure_logging()` replaces `logging.basicConfig`. `RequestIdMiddleware`
+  reads (or generates) `X-Request-Id` per request, makes it available to
+  every log line emitted while handling that request via a `ContextVar`
+  (no explicit threading through call chains), and echoes it back in the
+  response header — one request's full log trail is one grep away.
+- **`GET /health/deep`**: DB connectivity (`SELECT 1`), vault manifest
+  readability (`VaultReader.manifest_roles()`), and whether Stripe is
+  configured (informational, doesn't affect `status`). `{"status": "ok"|
+  "degraded", "checks": {...}}` — no auth (deploy platforms usually probe
+  health endpoints without credentials). `GET /health` (existing, shallow)
+  is unchanged.
+- **`scripts/daily_report.py`**: writes `reports/YYYY-MM-DD.md` (git-
+  ignored — deploy-environment artifact, not repo content) summarizing the
+  previous day — new/closed (won vs. walked) cases, escalated cases
+  (approximate — no dedicated escalation-event log yet, see
+  `app.reports`' docstring), `llm_calls` volume, total captured payments,
+  new waitlist signups. Emails it to `OPS_EMAIL` too if that's set (reuses
+  the existing Gmail send path); file-only otherwise, never errors on a
+  missing `OPS_EMAIL`. Intended to run daily via Railway cron, same as
+  `scripts/run_intel.py`.
+- **`docs/RUNBOOK.md`**: deploy steps, rollback, and incident-response
+  notes for the failure modes this system actually has — Stripe webhook
+  signature mismatches, WhatsApp signature mismatches, the opt-in guard or
+  payment guard blocking a send unexpectedly (and why that's often
+  correct, not a bug), an LLM outage (already routes to the human queue
+  via `SubagentEscalated`, no extra code needed), migration issues.
+- A regression test (`tests/test_ops.py::test_no_log_statement_references_
+  a_secret_setting`) scans `app/**/*.py` for any `log*.*(...)` call whose
+  arguments mention a secret `Settings` field name — guards against a
+  future debug line accidentally logging a token/key.
 
 ## Öğrenme Mimarisi
 
