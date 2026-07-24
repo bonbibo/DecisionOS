@@ -13,7 +13,7 @@ from pathlib import Path
 
 import yaml
 
-from app.models import ActorEnum, Case, Message, Offer, StateEnum
+from app.models import ActorEnum, Case, Message, MessageKindEnum, Offer, StateEnum, User
 
 # Allowed target states for each current state.
 TRANSITIONS: dict[StateEnum, set[StateEnum]] = {
@@ -309,25 +309,33 @@ def record_offer(
 
 
 def record_message(
-    case: Case,
+    case: Case | None,
     channel,
     direction,
     content: str,
     sender: str | None = None,
     raw_payload: dict | None = None,
+    *,
+    user: User | None = None,
+    kind: MessageKindEnum = MessageKindEnum.negotiation,
 ) -> Message:
-    """Append a new Message to the case's transcript.
+    """Create a new Message tied to `case` (negotiation) and/or `user` (intake).
 
-    Caller is responsible for adding/committing the message via a session.
+    Caller is responsible for adding/committing the message via a session —
+    appending to a relationship collection on an already session-persistent
+    parent (`case.messages` / `user.messages`) cascades reliably, which is
+    why both are set via `.append()` here rather than `Message(case=..., user=...)`.
     """
-    # Append via the collection (not `case=case` in the constructor) so the
-    # save-update cascade picks up the new row reliably on the next flush.
     message = Message(
         channel=channel,
         direction=direction,
+        kind=kind,
         sender=sender,
         content=content,
         raw_payload=raw_payload,
     )
-    case.messages.append(message)
+    if case is not None:
+        case.messages.append(message)
+    if user is not None:
+        user.messages.append(message)
     return message

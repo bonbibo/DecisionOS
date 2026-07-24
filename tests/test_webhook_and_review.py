@@ -145,14 +145,6 @@ def test_webhook_approved_draft_lands_in_outbound_queue(api_client, make_case, d
     assert items[0].recipient == "+15555550123"
 
 
-def test_webhook_unknown_sender_is_dropped_without_crashing(api_client, db_session, caplog):
-    resp = _post_webhook(api_client, _whatsapp_payload("+19998887777", "hello?"))
-
-    assert resp.status_code == 200
-    assert db_session.query(OutboundQueueItem).count() == 0
-    assert "unknown sender" in caplog.text.lower()
-
-
 def test_webhook_escalation_sets_case_flag_without_queueing(api_client, make_case, db_session, monkeypatch):
     case = make_case(counterparty_contact="+15555550123")
     factory = ScriptedClientFactory({SubagentRole.analist: ["not json", "still not json"]})

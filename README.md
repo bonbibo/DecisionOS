@@ -13,24 +13,26 @@ app/
   main.py            FastAPI app, health check, minimal Case endpoints
   config.py           Settings (env vars / .env)
   database.py          SQLAlchemy engine/session, declarative Base
-  models.py            Case, Message, Offer, LLMCall, OutboundQueueItem, StateEnum + related enums
+  models.py            User, UserMemory, Case, Message, Offer, LLMCall,
+                          OutboundQueueItem, StateEnum + related enums
   engine.py             NegotiationEngine: the state machine + vault loaders
+  intake.py              5th subagent: onboarding conversation before a Case exists
   metrics.py             Dashboard generation from vault frontmatter
   subagents.py            Subagent prompt loading + JSON response contract
   orchestrator.py          Turn flow: Analist -> Stratejist -> Yazıcı <-> Kritik
   llm.py                   AnthropicSubagentClient (real LLM calls + cost logging)
   review.py                POST /review/{id}/approve|edit|reject (human-in-the-loop queue)
   schemas.py            Pydantic request/response models
-  prompts/                 Subagent system prompts (see below)
+  prompts/                 Subagent system prompts, incl. intake.md (see below)
   channels/
-    whatsapp.py          Meta Cloud API webhook — real dispatch into run_turn()
+    whatsapp.py          Meta Cloud API webhook — routes to intake or run_turn()
     email.py              Gmail API (send + Pub/Sub push) stub
 alembic/                 Migrations (env.py wired to app.models metadata)
 vault/                   Obsidian vault: playbooks + tactics (see below)
 scripts/
   update_metrics.py        Regenerates vault/05-Metrikler/dashboard.md
 tests/                   pytest suite (state machine, vault loaders, subagents,
-                            orchestrator, LLM client, webhook + review flow)
+                            orchestrator, LLM client, intake, webhook + review flow)
 ```
 
 ## State machine
@@ -88,12 +90,13 @@ pytest
 ```
 
 Most of the suite (state machine, vault loaders, subagents, orchestrator) is
-pure Python and needs nothing running. `tests/test_llm.py`,
-`tests/test_webhook_and_review.py`, and the `db_session`/`api_client`/`make_case`
-fixtures in `tests/conftest.py` exercise real DB persistence and need a
-reachable Postgres matching `DATABASE_URL` — they never call the real
-Anthropic or Meta Graph APIs (the LLM client and `send_text_message` are
-monkeypatched with fakes), so no API keys are required either.
+pure Python and needs nothing running. `tests/test_llm.py`, `tests/test_intake.py`,
+`tests/test_webhook_and_review.py`, `tests/test_intake_webhook.py`, and the
+`db_session`/`api_client`/`make_case`/`make_user` fixtures in `tests/conftest.py`
+exercise real DB persistence and need a reachable Postgres matching
+`DATABASE_URL` — they never call the real Anthropic or Meta Graph APIs (the
+LLM client and `send_text_message` are monkeypatched with fakes), so no API
+keys are required either.
 
 ## Migrations
 
@@ -170,7 +173,7 @@ score, regenerate it with:
 python scripts/update_metrics.py
 ```
 
-## Subagents (Stratejist / Yazıcı / Kritik / Analist)
+## Subagents (Stratejist / Yazıcı / Kritik / Analist / Intake)
 
 `app/prompts/*.md` holds each subagent's full system prompt as plain
 Markdown — a prompt update is a `git push`, not a code change (`app/prompts/README.md`
@@ -213,35 +216,85 @@ so none of that requires an API key to run.
 ## LLM client (`app/llm.py`)
 
 `AnthropicSubagentClient` implements `SubagentClient` against the real
-Anthropic Messages API. One instance is bound to a single `case_id` + DB
-session (construct it per turn) so every call it makes can be logged:
+Anthropic Messages API. One instance is bound to a `case_id` and/or `user_id`
++ DB session (construct it per turn) so every call it makes can be logged.
+`case_id` is `None` for intake calls, which happen before any Case exists:
 
 ```python
 from app.llm import AnthropicSubagentClient
 
-client = AnthropicSubagentClient(case_id=case.id, db=db)
+# negotiation turn
+client = AnthropicSubagentClient(case_id=case.id, db=db, user_id=case.user_id)
 run_turn(case, client, incoming_message=text, thread=thread, tactics=tactics)
+
+# intake turn (no case yet)
+client = AnthropicSubagentClient(case_id=None, db=db, user_id=user.id)
+run_intake_turn(user, client, incoming_message=text, thread=thread, tactics=tactics)
 ```
 
 - **Model per role** comes from `Settings` (`MODEL_YAZICI`, `MODEL_STRATEJIST`,
-  `MODEL_ANALIST`, `MODEL_KRITIK` in `.env`) — not hardcoded, so a model swap
-  is a config change. `.env.example`'s defaults follow `app/prompts/README.md`'s
-  suggestion (Sonnet for Stratejist/Yazıcı, Haiku for Analist/Kritik); confirm
-  against real `llm_calls` cost/quality data before trusting it long-term.
+  `MODEL_ANALIST`, `MODEL_KRITIK`, `MODEL_INTAKE` in `.env`) — not hardcoded, so
+  a model swap is a config change. `.env.example`'s defaults follow
+  `app/prompts/README.md`'s suggestion (Sonnet for Stratejist/Yazıcı/Intake,
+  Haiku for Analist/Kritik); confirm against real `llm_calls` cost/quality data
+  before trusting it long-term.
 - **JSON enforcement**: the system prompt gets a `"SADECE geçerli JSON döndür."`
   suffix, and a leading/trailing ` ```json ... ``` ` fence is stripped from the
   response before it reaches `app.subagents.call_subagent_json`'s existing
   parse-validate-retry-then-escalate logic — nothing about that retry
   mechanism changed.
-- **Cost tracking**: every call logs a row to `llm_calls` (`case_id`, `role`,
-  `model`, `input_tokens`, `output_tokens`, `latency_ms`), so a per-role
+- **Cost tracking**: every call logs a row to `llm_calls` (`case_id`, `user_id`,
+  `role`, `model`, `input_tokens`, `output_tokens`, `latency_ms`), so a per-role
   cost/quality query against real traffic is just a SQL query away.
+
+## Intake & user memory (`app/intake.py`)
+
+Before a `Case` exists, a new WhatsApp number is a prospective customer, not
+a negotiation counterparty — `app/prompts/intake.md` is a 5th subagent that
+onboards them:
+
+```python
+from app.intake import run_intake_turn
+
+result = run_intake_turn(user, client, incoming_message=text, thread=thread, tactics=tactics)
+# result.status: "reply" | "case_created" | "escalated"
+```
+
+- Each turn's JSON (`reply`, `collected_fields`, `missing_fields`, `ready`,
+  optional `memory_updates`) is stored on `User.intake_state` and fed back in
+  as `COLLECTED_FIELDS` on the next turn, so the brief accumulates across
+  messages. `app/prompts/intake.md` defines the exact `collected_fields` keys
+  (`hedef_kira`, `ev_sahibi_iletisim`, ... — edit that file, not code, to
+  change the schema) and requires `hedef_kira` + `ev_sahibi_iletisim` before
+  `ready` can flip `true`.
+- Once `ready=true`, the subagent's own `reply` carries the savings-fee
+  summary + approval ask (`"tasarrufun %25'i, min 500 AED"`) and
+  `awaiting_confirmation` is set. The **next** message is checked with a
+  simple deterministic keyword match (`evet`/`yes`/`onaylıyorum`/...) — not
+  another LLM call — rather than inventing a `confirmed` field in the JSON
+  contract. A confirmation creates the `Case` from `collected_fields`, calls
+  Stratejist once to seed `Case.plan`, and moves the case straight to
+  `anchoring` via `NegotiationEngine.start_anchor()`. Anything else falls
+  through to a normal intake turn (corrections, questions, etc.).
+- `memory_updates` are durable facts worth keeping across cases (e.g.
+  `risk_toleransi: dusuk`) — written to `UserMemory` (unique per
+  `(user_id, key)`, upserted) and fed back as `MEMORY` on every future intake
+  turn for that user, in this case and any future one.
+- Intake replies are **sent directly** via `whatsapp.send_text_message`, not
+  queued in `outbound_queue` — this is a real-time onboarding chat with our
+  own customer, a fundamentally lower-risk audience than the counterparty
+  drafts the approval queue exists to gate. (This direct-send design wasn't
+  explicitly specified in the intake task and is worth confirming matches
+  the intended UX.)
 
 ## Review queue (`app/review.py`)
 
 `run_turn` never sends anything by itself. When Kritik returns `APPROVE`,
 the WhatsApp webhook writes the draft into `outbound_queue` with status
-`pending_approval` — actually sending only happens via:
+`pending_approval` and `audience=counterparty`; it also queues a short
+bilingual status note for the case's own user (`audience=client`, same
+`pending_approval` gate — see Channels below for why that one stays gated
+too in V1). Actually sending only happens via:
 
 - `POST /review/{id}/approve` — the only endpoint that actually sends: calls
   `whatsapp.send_text_message` and marks the item `sent` (currently
@@ -265,13 +318,21 @@ panel — the queue table doesn't care who calls it, as long as they have the to
   Meta's `X-Hub-Signature-256` header — an HMAC-SHA256 of the raw request
   body keyed with `WHATSAPP_APP_SECRET` — and rejects with `401` if it's
   missing or doesn't match, so only Meta (or someone who has the app secret)
-  can feed us events. Once verified, it does the real thing: match the
-  sender's phone number to their active (non-`close`) `Case`, log and drop
-  the message if none matches ("unknown sender"), append it to
-  `Case.messages`, build the last 10 messages as `thread`, load fresh
-  `tactics`/`profiles` from `vault/`, and run `app.orchestrator.run_turn`. An
-  `APPROVE`d draft goes to `outbound_queue` (see above) — nothing is sent
-  from inside the webhook handler itself.
+  can feed us events. Once verified, the sender's phone number routes the
+  message one of two ways:
+  - **Has an active (non-`close`) `Case` as its `counterparty_contact`** —
+    negotiation. Append the message to `Case.messages`, build the last 10
+    as `thread`, load fresh `tactics`/`profiles` from `vault/`, and run
+    `app.orchestrator.run_turn`. An `APPROVE`d draft goes to `outbound_queue`
+    (`audience=counterparty`); a short status note for the case's own user
+    (if any) is queued too (`audience=client`) — kept `pending_approval` in
+    V1 even though it doesn't carry negotiation risk, so there's a single
+    send path to reason about rather than two.
+  - **No active `Case` for that number** — intake. Routed to
+    `app.intake.run_intake_turn` instead (see above); replies are sent
+    directly, not queued.
+  Nothing negotiation-facing is ever sent from inside the webhook handler
+  itself — only `POST /review/{id}/approve` sends counterparty/client-status drafts.
 - **Email** (`app/channels/email.py`): still a stub. Gmail API client built
   from an OAuth2 refresh token, a Pub/Sub push receiver
   (`POST /channels/email/webhook`) for `users.watch()` notifications, and a
@@ -282,9 +343,12 @@ panel — the queue table doesn't care who calls it, as long as they have the to
 ## Status
 
 Models, migrations, the state machine, vault loaders, the subagent
-orchestration loop, a real Anthropic-backed `SubagentClient` with cost
-logging, and the full WhatsApp inbound -> `run_turn` -> human-approval ->
-send loop are wired up end to end, with the webhook and review endpoints
-both authenticated (signature verification / bearer token respectively).
-Still open: the Gmail channel's `run_turn` dispatch, and multi-channel
-sending in `POST /review/{id}/approve` (WhatsApp only today).
+orchestration loop (including intake/onboarding), a real Anthropic-backed
+`SubagentClient` with cost logging, and the full WhatsApp
+intake-or-negotiation routing -> human-approval -> send loop are wired up
+end to end, with the webhook and review endpoints both authenticated
+(signature verification / bearer token respectively). Still open: the
+Gmail channel's `run_turn`/intake dispatch, multi-channel sending in
+`POST /review/{id}/approve` (WhatsApp only today), and auth/identity on the
+intake side (any WhatsApp number can start a case — reasonable for a public
+onboarding flow, but worth a deliberate look before scaling pilots).

@@ -4,7 +4,9 @@ Implements app.subagents.SubagentClient against the real Anthropic Messages
 API: per-role model selection from Settings (env-driven), a forced-JSON
 system-prompt suffix + code-fence stripping so app.subagents.call_subagent_json's
 existing retry/escalate logic sees clean text, and a cost/latency log row
-per call in llm_calls (case_id, role, model, input/output tokens, latency_ms).
+per call in llm_calls (case_id, user_id, role, model, input/output tokens,
+latency_ms). case_id is optional — SubagentRole.intake calls happen before
+any Case exists, logged against user_id instead.
 """
 
 import json
@@ -29,6 +31,7 @@ _MODEL_FOR_ROLE = {
     SubagentRole.yazici: "model_yazici",
     SubagentRole.analist: "model_analist",
     SubagentRole.kritik: "model_kritik",
+    SubagentRole.intake: "model_intake",
 }
 
 
@@ -45,20 +48,23 @@ def _strip_json_fence(text: str) -> str:
 class AnthropicSubagentClient:
     """SubagentClient implementation backed by the Anthropic Messages API.
 
-    One instance is bound to a single Case (via case_id) so every call it
-    makes can be logged against that case. `client` is an injectable seam
-    for tests: any object exposing `.messages.create(...)` with the same
-    shape as `anthropic.Anthropic().messages` works.
+    One instance is bound to a single Case and/or User (via case_id/user_id)
+    so every call it makes can be logged against them — case_id is None for
+    SubagentRole.intake calls, which happen before any Case exists.
+    `client` is an injectable seam for tests: any object exposing
+    `.messages.create(...)` with the same shape as `anthropic.Anthropic().messages` works.
     """
 
     def __init__(
         self,
-        case_id: uuid.UUID,
+        case_id: uuid.UUID | None,
         db: Session,
+        user_id: uuid.UUID | None = None,
         settings: Settings | None = None,
         client: Any | None = None,
     ):
         self.case_id = case_id
+        self.user_id = user_id
         self.db = db
         self.settings = settings or get_settings()
         self._client = client or anthropic.Anthropic(api_key=self.settings.anthropic_api_key)
@@ -81,6 +87,7 @@ class AnthropicSubagentClient:
         self.db.add(
             LLMCall(
                 case_id=self.case_id,
+                user_id=self.user_id,
                 role=role.value,
                 model=model,
                 input_tokens=response.usage.input_tokens,

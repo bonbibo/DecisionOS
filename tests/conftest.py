@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, engine, get_db
 from app.main import app
-from app.models import Case, ChannelEnum, StateEnum
+from app.models import Case, ChannelEnum, StateEnum, User
 
-_TABLES_TO_CLEAN = ["outbound_queue", "llm_calls", "offers", "messages", "cases"]
+_TABLES_TO_CLEAN = ["outbound_queue", "llm_calls", "offers", "messages", "user_memory", "cases", "users"]
 
 
 @pytest.fixture
@@ -72,5 +72,21 @@ def make_case(db_session: Session):
         db_session.commit()
         db_session.refresh(case)
         return case
+
+    return _make
+
+
+@pytest.fixture
+def make_user(db_session: Session):
+    """Factory for a persisted User, committed to `db_session`."""
+
+    def _make(**overrides) -> User:
+        defaults = dict(phone="+15555550199")
+        defaults.update(overrides)
+        user = User(**defaults)
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+        return user
 
     return _make

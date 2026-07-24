@@ -2,7 +2,18 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,11 +53,68 @@ class OutboundStatusEnum(str, enum.Enum):
     sent = "sent"
 
 
+class MessageKindEnum(str, enum.Enum):
+    """Which conversation a Message belongs to: onboarding (no Case yet) or an
+    active negotiation (tied to a Case)."""
+
+    intake = "intake"
+    negotiation = "negotiation"
+
+
+class AudienceEnum(str, enum.Enum):
+    """Who an outbound_queue item is addressed to."""
+
+    counterparty = "counterparty"
+    client = "client"
+
+
+class User(Base):
+    """The end customer — the person texting the agent on WhatsApp to ask for help."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    phone: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    locale: Mapped[str] = mapped_column(String(10), nullable=False, default="tr")
+
+    # In-progress intake brief: {collected_fields, missing_fields, ready,
+    # awaiting_confirmation}. Cleared once a Case is created. See app/intake.py.
+    intake_state: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    cases: Mapped[list["Case"]] = relationship(back_populates="user")
+    messages: Mapped[list["Message"]] = relationship(back_populates="user")
+    memory: Mapped[list["UserMemory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    llm_calls: Mapped[list["LLMCall"]] = relationship(back_populates="user")
+
+
+class UserMemory(Base):
+    """A durable fact learned about a user, carried across cases (e.g. `risk_toleransi: dusuk`)."""
+
+    __tablename__ = "user_memory"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_memory_user_key"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    key: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[dict] = mapped_column(JSONB, nullable=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="memory")
+
+
 class Case(Base):
     __tablename__ = "cases"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     external_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     channel: Mapped[ChannelEnum] = mapped_column(Enum(ChannelEnum, name="channel_enum"), nullable=False)
     # Playbook vertical, e.g. "kira-bae" — matches a vault/01-Playbooks/*.md `dikey`.
     vertical: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -74,6 +142,7 @@ class Case(Base):
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    user: Mapped["User | None"] = relationship(back_populates="cases")
     messages: Mapped[list["Message"]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="Message.created_at"
     )
@@ -92,8 +161,14 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    case_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
+    # Negotiation messages are tied to a Case; intake messages (no Case yet)
+    # are tied to a User instead — exactly one of the two is set.
+    case_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
 
+    kind: Mapped[MessageKindEnum] = mapped_column(
+        Enum(MessageKindEnum, name="message_kind_enum"), nullable=False, default=MessageKindEnum.negotiation
+    )
     channel: Mapped[ChannelEnum] = mapped_column(Enum(ChannelEnum, name="channel_enum"), nullable=False)
     direction: Mapped[DirectionEnum] = mapped_column(Enum(DirectionEnum, name="direction_enum"), nullable=False)
     sender: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -102,7 +177,8 @@ class Message(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    case: Mapped["Case"] = relationship(back_populates="messages")
+    case: Mapped["Case | None"] = relationship(back_populates="messages")
+    user: Mapped["User | None"] = relationship(back_populates="messages")
 
 
 class Offer(Base):
@@ -128,7 +204,10 @@ class LLMCall(Base):
     __tablename__ = "llm_calls"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    case_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
+    # Intake calls (SubagentRole.intake) happen before any Case exists, so
+    # case_id is nullable; user_id is set whenever the caller is known.
+    case_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
 
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # a SubagentRole value
     model: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -138,7 +217,8 @@ class LLMCall(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    case: Mapped["Case"] = relationship(back_populates="llm_calls")
+    case: Mapped["Case | None"] = relationship(back_populates="llm_calls")
+    user: Mapped["User | None"] = relationship(back_populates="llm_calls")
 
 
 class OutboundQueueItem(Base):
@@ -153,6 +233,9 @@ class OutboundQueueItem(Base):
     recipient: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     tactic_used: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    audience: Mapped[AudienceEnum] = mapped_column(
+        Enum(AudienceEnum, name="audience_enum"), nullable=False, default=AudienceEnum.counterparty
+    )
 
     status: Mapped[OutboundStatusEnum] = mapped_column(
         Enum(OutboundStatusEnum, name="outbound_status_enum"),

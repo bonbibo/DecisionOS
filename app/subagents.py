@@ -19,15 +19,18 @@ class SubagentRole(str, enum.Enum):
     yazici = "yazici"
     kritik = "kritik"
     analist = "analist"
+    intake = "intake"
 
 
 # app/prompts/README.md: "Yazıcı/Stratejist için sonnet, Analist/Kritik için
 # haiku yeterli olabilir — maliyet ölçümüyle karar ver." Advisory only.
+# Intake is a natural-conversation role, grouped with Yazıcı/Stratejist.
 SUBAGENT_MODEL_HINTS: dict[SubagentRole, str] = {
     SubagentRole.stratejist: "sonnet",
     SubagentRole.yazici: "sonnet",
     SubagentRole.kritik: "haiku",
     SubagentRole.analist: "haiku",
+    SubagentRole.intake: "sonnet",
 }
 
 _REQUIRED_KEYS: dict[SubagentRole, tuple[str, ...]] = {
@@ -35,6 +38,7 @@ _REQUIRED_KEYS: dict[SubagentRole, tuple[str, ...]] = {
     SubagentRole.yazici: ("message", "tactic_used"),
     SubagentRole.kritik: ("verdict",),
     SubagentRole.analist: ("archetype", "recommended_state"),
+    SubagentRole.intake: ("reply", "collected_fields", "missing_fields", "ready"),
 }
 
 
