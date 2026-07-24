@@ -6,7 +6,12 @@ or either side walks away).
 """
 
 import enum
+import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
+
+import yaml
 
 from app.models import ActorEnum, Case, Message, Offer, StateEnum
 
@@ -41,11 +46,119 @@ EVENT_TARGET_STATE: dict[NegotiationEvent, StateEnum] = {
 }
 
 
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?\n)---\s*\n?(.*)", re.DOTALL)
+
+
+def _parse_frontmatter(text: str) -> tuple[dict, str]:
+    """Split a vault note into its YAML frontmatter dict and markdown body."""
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        return {}, text
+    raw_meta, body = match.groups()
+    meta = yaml.safe_load(raw_meta) or {}
+    return meta, body.strip()
+
+
+@dataclass
+class Tactic:
+    """A negotiation tactic loaded from a vault/01-Playbooks/taktikler/*.md note."""
+
+    taktik_id: str
+    ad: str
+    dikey: str
+    asama: StateEnum
+    durum: str
+    kullanilma_sayisi: int
+    basari_sayisi: int
+    basari_orani: float
+    risk: str
+    guncelleme: str
+    body: str
+    source_path: Path
+
+    @property
+    def is_active(self) -> bool:
+        return self.durum == "aktif"
+
+
+@dataclass
+class Playbook:
+    """A negotiation playbook loaded from a vault/01-Playbooks/*.md note."""
+
+    playbook_id: str
+    dikey: str
+    durum: str
+    guncelleme: str
+    body: str
+    source_path: Path
+
+
+def load_tactics(vault_dir: Path | str = "vault") -> list[Tactic]:
+    """Parse every tactic note under vault/01-Playbooks/taktikler/*.md."""
+    taktikler_dir = Path(vault_dir) / "01-Playbooks" / "taktikler"
+    tactics = []
+    for path in sorted(taktikler_dir.glob("*.md")):
+        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        if "taktik_id" not in meta:
+            continue
+        tactics.append(
+            Tactic(
+                taktik_id=meta["taktik_id"],
+                ad=meta["ad"],
+                dikey=meta["dikey"],
+                asama=StateEnum(meta["asama"]),
+                durum=meta["durum"],
+                kullanilma_sayisi=int(meta.get("kullanilma_sayisi", 0)),
+                basari_sayisi=int(meta.get("basari_sayisi", 0)),
+                basari_orani=float(meta.get("basari_orani", 0.0)),
+                risk=meta.get("risk", "dusuk"),
+                guncelleme=str(meta.get("guncelleme", "")),
+                body=body,
+                source_path=path,
+            )
+        )
+    return tactics
+
+
+def load_playbooks(vault_dir: Path | str = "vault") -> list[Playbook]:
+    """Parse every playbook note directly under vault/01-Playbooks/ (excluding taktikler/)."""
+    playbooks_dir = Path(vault_dir) / "01-Playbooks"
+    playbooks = []
+    for path in sorted(playbooks_dir.glob("*.md")):
+        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        if "playbook_id" not in meta:
+            continue
+        playbooks.append(
+            Playbook(
+                playbook_id=meta["playbook_id"],
+                dikey=meta["dikey"],
+                durum=meta["durum"],
+                guncelleme=str(meta.get("guncelleme", "")),
+                body=body,
+                source_path=path,
+            )
+        )
+    return playbooks
+
+
+def tactics_for_stage(tactics: list[Tactic], dikey: str, asama: StateEnum) -> list[Tactic]:
+    """Active tactics matching a playbook vertical + negotiation stage, best success rate first."""
+    matches = [t for t in tactics if t.is_active and t.dikey == dikey and t.asama is asama]
+    return sorted(matches, key=lambda t: t.basari_orani, reverse=True)
+
+
 class NegotiationEngine:
     """Wraps a single Case and enforces valid state transitions on it."""
 
-    def __init__(self, case: Case):
+    def __init__(self, case: Case, tactics: list[Tactic] | None = None):
         self.case = case
+        self.tactics = tactics or []
+
+    def available_tactics(self) -> list[Tactic]:
+        """Active tactics for this case's vertical at its current stage, ranked by success rate."""
+        if not self.case.vertical:
+            return []
+        return tactics_for_stage(self.tactics, self.case.vertical, self.case.state)
 
     def can_transition(self, target: StateEnum) -> bool:
         return target in TRANSITIONS.get(self.case.state, set())

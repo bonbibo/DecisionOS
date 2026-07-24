@@ -20,7 +20,8 @@ app/
     whatsapp.py          Meta Cloud API webhook (verify + inbound) stub
     email.py              Gmail API (send + Pub/Sub push) stub
 alembic/                 Migrations (env.py wired to app.models metadata)
-tests/                   pytest suite (state machine transitions)
+vault/                   Obsidian vault: playbooks + tactics (see below)
+tests/                   pytest suite (state machine + playbook loader)
 ```
 
 ## State machine
@@ -92,6 +93,41 @@ alembic revision --autogenerate -m "message"
 alembic upgrade head
 alembic downgrade -1
 ```
+
+## Vault (playbooks & tactics)
+
+`vault/` is an Obsidian vault that doubles as the engine's live tactic
+library — updating a playbook is a `git push`, not a code change:
+
+```
+vault/
+  01-Playbooks/
+    kira-bae.md              playbook note (anchor strategy, concession ladder, red lines)
+    taktikler/
+      TK-001-*.md, TK-002-*.md, TK-003-*.md   tactic notes
+  02-Cases/, 03-Retros/, 04-Karsi-Taraf/, 05-Metrikler/   (case log / retro / counterparty
+                                                             archetype / metrics folders — currently
+                                                             empty placeholders, to be filled in per case)
+  _sablonlar/                 templates for new tactic / retro notes
+```
+
+Each tactic note has YAML frontmatter (`taktik_id`, `dikey`, `asama`,
+`durum`, `basari_orani`, `risk`, ...). `app/engine.py` parses these directly:
+
+```python
+from app.engine import load_tactics, load_playbooks, NegotiationEngine
+
+tactics = load_tactics("vault")          # every vault/01-Playbooks/taktikler/*.md note
+playbooks = load_playbooks("vault")      # every vault/01-Playbooks/*.md playbook note
+
+engine = NegotiationEngine(case, tactics=tactics)
+engine.available_tactics()               # active tactics matching case.vertical + case.state
+```
+
+`Case.vertical` (e.g. `"kira-bae"`) selects which playbook's tactics apply;
+`available_tactics()` filters the loaded tactics to the case's current
+negotiation stage (`discovery`/`anchoring`/`counter`/`concession`/`close`)
+and ranks them by `basari_orani` (success rate).
 
 ## Channel stubs
 

@@ -8,6 +8,7 @@ from app.models import ChannelEnum, StateEnum
 
 class CaseCreate(BaseModel):
     channel: ChannelEnum
+    vertical: str | None = None
     counterparty_name: str | None = None
     counterparty_contact: str
     item_description: str | None = None
@@ -21,6 +22,7 @@ class CaseRead(BaseModel):
 
     id: uuid.UUID
     channel: ChannelEnum
+    vertical: str | None
     counterparty_name: str | None
     counterparty_contact: str
     state: StateEnum

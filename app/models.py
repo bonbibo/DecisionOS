@@ -40,6 +40,8 @@ class Case(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     external_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     channel: Mapped[ChannelEnum] = mapped_column(Enum(ChannelEnum, name="channel_enum"), nullable=False)
+    # Playbook vertical, e.g. "kira-bae" — matches a vault/01-Playbooks/*.md `dikey`.
+    vertical: Mapped[str | None] = mapped_column(String(100), nullable=True)
     counterparty_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     counterparty_contact: Mapped[str] = mapped_column(String(255), nullable=False)
 
