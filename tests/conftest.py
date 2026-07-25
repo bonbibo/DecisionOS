@@ -14,6 +14,7 @@ _TABLES_TO_CLEAN = [
     "messages",
     "payments",
     "opt_ins",
+    "login_codes",
     "user_memory",
     "cases",
     "users",

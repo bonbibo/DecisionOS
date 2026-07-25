@@ -122,12 +122,15 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     phone: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Unique (Postgres allows multiple NULLs under a unique constraint, so
+    # WhatsApp-only users with no email are unaffected) — this is now the
+    # customer portal's login identifier, see app.auth / app/channels/web.py.
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     locale: Mapped[str] = mapped_column(String(10), nullable=False, default="tr")
 
-    # Bearer token for POST /web/chat, issued by POST /web/register. V1 has no
-    # email/phone verification — registering is enough. See app/channels/web.py.
+    # Bearer token for POST /web/chat, issued by POST /web/auth/verify-code
+    # after a successful email OTP login (see app.auth, app/channels/web.py).
     web_session_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
 
     # In-progress intake brief: {collected_fields, missing_fields, ready,
@@ -140,6 +143,7 @@ class User(Base):
     messages: Mapped[list["Message"]] = relationship(back_populates="user")
     memory: Mapped[list["UserMemory"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     llm_calls: Mapped[list["LLMCall"]] = relationship(back_populates="user")
+    login_codes: Mapped[list["LoginCode"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class UserMemory(Base):
@@ -407,3 +411,26 @@ class OptIn(Base):
     method: Mapped[OptInMethodEnum] = mapped_column(Enum(OptInMethodEnum, name="opt_in_method_enum"), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LoginCode(Base):
+    """A one-time 6-digit email login code — see app.auth.create_login_code/
+    verify_login_code. Replaces the old "email+phone, no verification"
+    trust model for the customer portal (app/portal/, app/channels/web.py's
+    POST /web/auth/request-code -> POST /web/auth/verify-code)."""
+
+    __tablename__ = "login_codes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # sha256 hex — never store plaintext
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Failed-verify counter — a code is rejected once this hits MAX_ATTEMPTS
+    # (app.auth), a basic brute-force guard on the 6-digit space.
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="login_codes")

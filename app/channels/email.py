@@ -17,8 +17,9 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from app.auth import CODE_TTL
 from app.config import get_settings
-from app.models import Case
+from app.models import Case, User
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -121,3 +122,18 @@ def send_initial_contact_email(case: Case) -> dict | None:
     )
     subject = "Kiralama hakkında kısa bir not"
     return send_email(case.counterparty_email, subject, body)
+
+
+def send_login_code_email(user: User, code: str) -> dict | None:
+    """The email OTP for the customer portal login (app.auth,
+    POST /web/auth/request-code). No-op if the user somehow has no email
+    on file (shouldn't happen — email is required at registration)."""
+    if not user.email:
+        return None
+
+    body = (
+        f"Giriş kodunuz: {code}\n\n"
+        f"Bu kod {int(CODE_TTL.total_seconds() // 60)} dakika geçerlidir ve yalnızca bir kez "
+        "kullanılabilir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
+    )
+    return send_email(user.email, "Giriş kodunuz", body)
