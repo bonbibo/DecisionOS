@@ -185,6 +185,7 @@ vault/
     KR-002-dikey-sirasi.md       vertical rollout order decision (durum: aktif)
     KR-003-ses-kanali-esigi.md    voice-escalation threshold (durum: taslak)
     KR-004-sirket-kimligi.md      company identity (durum: taslak)
+    KR-006-sesli-pazarlik-otonom-arama.md   live autonomous voice call design (durum: taslak)
     KR-005-dikey-radar.md         8-vertical expansion radar + activation gates (Dikey Paketi, durum: aktif)
   07-Fiyatlama/
     kira-bae.md                pricing model (`durum: aktif`) — success fee % / min fee / flat alternative
@@ -826,6 +827,18 @@ code is what makes that decision *measurable*.
   (`app/prompts/yazici.md`, `intake.md`) mean the code doesn't have to
   wait on that decision — it runs today with a placeholder name, and
   picking a real one is a config change, not a code change.
+
+`vault/06-Kararlar/KR-006-sesli-pazarlik-otonom-arama.md` (`durum: taslak`,
+no code) records the *shape* of a future fully-autonomous live voice call —
+KR-003 decides *when* to invest, this decides *how*. The text flow's one
+safety principle ("nothing reaches the counterparty without human review")
+can't apply to a live call, so KR-006 records where the equivalent risk
+gets caught instead: a deterministic floor/ceiling check in front of the
+speech layer (not a prompt instruction), full call recording + post-call
+transcript review, and the existing payment pre-auth gate still catching
+any bad outcome at close. Explicitly blocked on a legal opinion (recording
+consent) before any engineering starts — same category of open item as
+`KR-004`.
 
 ## Öğrenme Mimarisi
 
