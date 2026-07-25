@@ -14,10 +14,14 @@ customer:
   - no active Case -> intake: fed through app.intake.run_intake_turn, reply
     returned inline.
 
-POST /web/register issues a bearer session_token for POST /web/chat and
-GET /web/case/{id}/timeline. V1 has no email/phone verification —
-registering is enough, same trust model as WhatsApp (anyone who can text
-the number is treated as that phone's owner).
+POST /web/auth/request-code -> POST /web/auth/verify-code issues the
+bearer session_token for POST /web/chat, GET /web/cases and GET /web/
+case/{id}/timeline. Replaces the old "register with phone, no
+verification" trust model: request-code upserts the User by phone (same
+as the old /web/register) but never hands back a token directly — it
+emails a one-time code (app.auth) to the address on file, and only
+verify-code (which checks that code) issues the session. See app.auth
+for the code lifecycle.
 """
 
 import logging
@@ -28,6 +32,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import create_login_code, verify_login_code
 from app.channels import email
 from app.database import get_db
 from app.engine import load_tactics, record_message
@@ -48,11 +53,14 @@ from app.models import (
 from app.orchestrator import run_turn, status_message_for
 from app.payments import handle_turn_outcome
 from app.schemas import (
+    CaseRead,
     CaseTimelineRead,
     WebChatRequest,
     WebChatResponse,
-    WebRegisterRequest,
-    WebRegisterResponse,
+    WebRequestCodeRequest,
+    WebRequestCodeResponse,
+    WebVerifyCodeRequest,
+    WebVerifyCodeResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,21 +86,33 @@ def require_web_session(authorization: str | None = Header(default=None), db: Se
     return user
 
 
-@router.post("/register", response_model=WebRegisterResponse)
-def register(payload: WebRegisterRequest, db: Session = Depends(get_db)) -> WebRegisterResponse:
+@router.post("/auth/request-code", response_model=WebRequestCodeResponse)
+def request_code(payload: WebRequestCodeRequest, db: Session = Depends(get_db)) -> WebRequestCodeResponse:
     user = db.execute(select(User).where(User.phone == payload.phone)).scalars().first()
-    token = secrets.token_urlsafe(32)
     if user is None:
-        user = User(phone=payload.phone, email=payload.email, name=payload.name, web_session_token=token)
+        user = User(phone=payload.phone, email=payload.email, name=payload.name)
         db.add(user)
     else:
         user.email = payload.email
         if payload.name is not None:
             user.name = payload.name
-        user.web_session_token = token
+
+    code = create_login_code(user)
     db.commit()
-    db.refresh(user)
-    return WebRegisterResponse(user_id=user.id, session_token=token)
+    email.send_login_code_email(user, code)
+    return WebRequestCodeResponse()
+
+
+@router.post("/auth/verify-code", response_model=WebVerifyCodeResponse)
+def verify_code(payload: WebVerifyCodeRequest, db: Session = Depends(get_db)) -> WebVerifyCodeResponse:
+    user = db.execute(select(User).where(User.email == payload.email)).scalars().first()
+    if user is None or not verify_login_code(user, payload.code):
+        db.commit()  # persist the attempt-count bump on a wrong guess
+        raise HTTPException(status_code=401, detail="invalid or expired code")
+
+    user.web_session_token = secrets.token_urlsafe(32)
+    db.commit()
+    return WebVerifyCodeResponse(user_id=user.id, session_token=user.web_session_token)
 
 
 def _find_active_case(db: Session, user: User) -> Case | None:
@@ -197,6 +217,13 @@ def chat(
     if case is not None:
         return _handle_negotiation_message(db, case, user, payload.message)
     return _handle_intake_message(db, user, payload.message)
+
+
+@router.get("/cases", response_model=list[CaseRead])
+def list_cases(user: User = Depends(require_web_session), db: Session = Depends(get_db)) -> list[Case]:
+    return list(
+        db.execute(select(Case).where(Case.user_id == user.id).order_by(Case.created_at.desc())).scalars().all()
+    )
 
 
 @router.get("/case/{case_id}/timeline", response_model=CaseTimelineRead)

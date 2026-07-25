@@ -7,6 +7,7 @@ DB write. If this test is green, that sentence is satisfied.
 import hashlib
 import hmac
 import json
+import re
 from datetime import date, timezone
 
 import app.channels.email as email_module
@@ -128,10 +129,16 @@ def test_waitlist_to_capture_end_to_end(api_client, db_session, monkeypatch):
     assert resp.status_code == 200
     assert db_session.query(WaitlistSignup).filter(WaitlistSignup.email == "tenant@example.com").count() == 1
 
-    # 2. Web registration.
+    # 2. Web registration -> email OTP login.
     resp = api_client.post(
-        "/web/register", json={"email": "tenant@example.com", "phone": "+15559990000", "name": "Test Tenant"}
+        "/web/auth/request-code",
+        json={"email": "tenant@example.com", "phone": "+15559990000", "name": "Test Tenant"},
     )
+    assert resp.status_code == 200
+    code_body = email_calls[-1][2]
+    login_code = re.search(r"Giriş kodunuz: (\d{6})", code_body).group(1)
+
+    resp = api_client.post("/web/auth/verify-code", json={"email": "tenant@example.com", "code": login_code})
     assert resp.status_code == 200
     session_token = resp.json()["session_token"]
 
@@ -168,8 +175,9 @@ def test_waitlist_to_capture_end_to_end(api_client, db_session, monkeypatch):
     assert case_id is not None
     assert "http" in body["reply"]  # checkout link included
 
-    assert email_calls, "send_initial_contact_email should have fired (counterparty_email is known)"
-    assert email_calls[0][0] == "landlord@example.com"
+    # email_calls[0] is the login-code OTP sent to the tenant in step 2;
+    # send_initial_contact_email to the landlord fires here in step 3.
+    assert email_calls[-1][0] == "landlord@example.com"
 
     from app.models import Case
 

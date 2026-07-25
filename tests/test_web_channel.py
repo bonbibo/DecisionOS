@@ -1,6 +1,8 @@
 import base64
 import json
+import re
 
+import app.channels.email as email_module
 import app.channels.web as web_module
 from app.config import get_settings
 from app.models import (
@@ -83,17 +85,26 @@ def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _register(api_client, phone="+15550001111", email="a@b.com", name="Test User"):
-    resp = api_client.post("/web/register", json={"email": email, "phone": phone, "name": name})
+def _register(api_client, monkeypatch, phone="+15550001111", email="a@b.com", name="Test User"):
+    email_calls = []
+    monkeypatch.setattr(
+        email_module, "send_email", lambda to, subject, body: email_calls.append((to, subject, body))
+    )
+
+    resp = api_client.post("/web/auth/request-code", json={"email": email, "phone": phone, "name": name})
+    assert resp.status_code == 200
+    code = re.search(r"Giriş kodunuz: (\d{6})", email_calls[-1][2]).group(1)
+
+    resp = api_client.post("/web/auth/verify-code", json={"email": email, "code": code})
     assert resp.status_code == 200
     return resp.json()
 
 
-# --- /web/register ---
+# --- /web/auth/request-code + /web/auth/verify-code ---
 
 
-def test_register_creates_user_with_session_token(api_client, db_session):
-    body = _register(api_client)
+def test_request_verify_code_creates_user_with_session_token(api_client, db_session, monkeypatch):
+    body = _register(api_client, monkeypatch)
     user = db_session.query(User).filter(User.phone == "+15550001111").one()
     assert str(user.id) == body["user_id"]
     assert user.web_session_token == body["session_token"]
@@ -101,11 +112,11 @@ def test_register_creates_user_with_session_token(api_client, db_session):
     assert user.name == "Test User"
 
 
-def test_register_existing_phone_reuses_user_and_reissues_token(api_client, db_session, make_user):
+def test_request_verify_code_existing_phone_reuses_user_and_reissues_token(api_client, db_session, make_user, monkeypatch):
     user = make_user(phone="+15550001111", email="old@b.com")
     old_token = user.web_session_token
 
-    body = _register(api_client, phone="+15550001111", email="new@b.com", name="Yeni İsim")
+    body = _register(api_client, monkeypatch, phone="+15550001111", email="new@b.com", name="Yeni İsim")
 
     db_session.refresh(user)
     assert body["user_id"] == str(user.id)
@@ -133,7 +144,7 @@ def test_chat_rejects_unknown_session_token(api_client):
 
 
 def test_chat_no_active_case_routes_to_intake(api_client, db_session, monkeypatch):
-    body = _register(api_client)
+    body = _register(api_client, monkeypatch)
     factory = ScriptedClientFactory({SubagentRole.intake: [_intake_question_response()]})
     monkeypatch.setattr(web_module, "AnthropicSubagentClient", factory)
 
@@ -293,6 +304,39 @@ def test_timeline_404_for_other_users_case(api_client, db_session, make_user):
     resp = api_client.get(f"/web/case/{case.id}/timeline", headers=_auth("tok-other"))
 
     assert resp.status_code == 404
+
+
+# --- /web/cases ---
+
+
+def test_list_cases_requires_auth(api_client):
+    resp = api_client.get("/web/cases")
+    assert resp.status_code == 401
+
+
+def test_list_cases_returns_only_own_cases_newest_first(api_client, db_session, make_user):
+    owner = make_user(phone="+15550001111")
+    owner.web_session_token = "tok-cases"
+    other = make_user(phone="+15550002222")
+
+    # Committed in separate transactions so Postgres's now() (same value for
+    # every statement within one transaction) can't tie their created_at.
+    older = Case(channel=ChannelEnum.web, counterparty_contact="+9715000000", state=StateEnum.anchoring)
+    owner.cases.append(older)
+    db_session.commit()
+
+    newer = Case(channel=ChannelEnum.web, counterparty_contact="+9715000001", state=StateEnum.discovery)
+    owner.cases.append(newer)
+    db_session.commit()
+
+    other.cases.append(Case(channel=ChannelEnum.web, counterparty_contact="+9715000002", state=StateEnum.discovery))
+    db_session.commit()
+
+    resp = api_client.get("/web/cases", headers=_auth("tok-cases"))
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [c["id"] for c in body] == [str(newer.id), str(older.id)]
 
 
 # --- admin panel ---

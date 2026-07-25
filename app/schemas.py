@@ -72,13 +72,22 @@ class CaseAnswerRequest(BaseModel):
     reviewed_by: str | None = None
 
 
-class WebRegisterRequest(BaseModel):
+class WebRequestCodeRequest(BaseModel):
     email: str
     phone: str
     name: str | None = None
 
 
-class WebRegisterResponse(BaseModel):
+class WebRequestCodeResponse(BaseModel):
+    status: str = "sent"
+
+
+class WebVerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+
+class WebVerifyCodeResponse(BaseModel):
     user_id: uuid.UUID
     session_token: str
 

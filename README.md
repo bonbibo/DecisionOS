@@ -28,7 +28,7 @@ app/
   channels/
     whatsapp.py          Meta Cloud API webhook — routes to intake or run_turn(); opt-in guard
     email.py              Gmail send + initial-contact email (Package H)
-    web.py                 POST /web/register|chat, GET /web/case/{id}/timeline
+    web.py                 POST /web/auth/request-code|verify-code|chat, GET /web/cases|case/{id}/timeline
     optin.py                GET /optin/{case_id} — click-to-WhatsApp landing page
   admin/
     __init__.py            /admin operator panel (Basic auth via REVIEW_TOKEN)
@@ -620,12 +620,19 @@ defaulting to `RealStripeClient()`.
 - **Web** (`app/channels/web.py`): our own customers talking to the agent
   directly through a browser instead of WhatsApp, with a synchronous
   request/response shape instead of a webhook:
-  - `POST /web/register` — `{email, phone, name}` -> creates (or, for a
-    phone that already exists, e.g. from a prior WhatsApp contact, reuses)
-    a `User` and issues a bearer `session_token`
-    (`User.web_session_token`, random 32-byte URL-safe token). V1 has no
-    email/phone verification, same trust model as WhatsApp: whoever holds
-    the token is treated as that phone's owner.
+  - `POST /web/auth/request-code` — `{email, phone, name}` -> creates (or,
+    for a phone that already exists, e.g. from a prior WhatsApp contact,
+    reuses) a `User`, then emails a 6-digit one-time code to `email`
+    (`app.auth.create_login_code` + `app.channels.email.send_login_code_email`
+    — see Portal login below). Never returns a token itself.
+  - `POST /web/auth/verify-code` — `{email, code}` -> `app.auth.
+    verify_login_code`; on success issues a bearer `session_token`
+    (`User.web_session_token`, random 32-byte URL-safe token). Replaces the
+    old "register with phone, no verification" trust model: holding a
+    session token now requires having actually received the code at the
+    email on file, not just knowing a phone number.
+  - `GET /web/cases` — `Authorization: Bearer <session_token>`, lists the
+    caller's own `Case`s (newest first) for the portal dashboard.
   - `POST /web/chat` — `Authorization: Bearer <session_token>`, body
     `{message}`. Routing mirrors WhatsApp but keyed by the authenticated
     `User` instead of a phone number (`Case.user_id == user.id` and
