@@ -14,7 +14,7 @@ app/
   config.py           Settings (env vars / .env)
   database.py          SQLAlchemy engine/session, declarative Base
   models.py            User, UserMemory, Case, Message, Offer, LLMCall,
-                          OutboundQueueItem, StateEnum + related enums
+                          OutboundQueueItem, LoginCode, StateEnum + related enums
   vault.py               VaultReader: the single gateway onto vault/ (manifest-driven)
   engine.py             NegotiationEngine: the state machine + legacy vault loaders
   intake.py              5th subagent: onboarding conversation before a Case exists
@@ -42,6 +42,10 @@ app/
   public/
     __init__.py             GET /, POST /waitlist, GET /waitlist/thanks
     templates/               Shared with app/channels/optin.py
+  portal/
+    __init__.py             Customer portal pages (Portal L3): GET /portal/login|""|case/{id}
+    templates/               Jinja shells; auth + data fetched client-side via app.channels.web's JSON API
+  auth.py                   Email OTP login codes (LoginCode lifecycle) — see app.channels.web, app.portal
   health.py                Deep healthcheck (DB/vault/Stripe) — Package J
   logging_utils.py          JSON logging + request-id middleware — Package J
   reports.py                Daily ops report aggregation — Package J
@@ -652,6 +656,33 @@ defaulting to `RealStripeClient()`.
     case's `messages` and `offers` logs (there's no separate
     state-transition history table, so the timeline is reconstructed from
     those two logs rather than a dedicated audit trail).
+
+## Customer portal (`app/portal/`)
+
+Server-rendered Jinja pages for customers to log in and see their own
+cases — no build step, same "plain HTML + inline `<script>`" shape as
+`app/public/`/`app/admin/`. The pages themselves carry no case data and no
+server-side auth check; each page's script holds the bearer
+`session_token` in `localStorage` and drives `app/channels/web.py`'s JSON
+API directly, redirecting to `/portal/login` on any `401`.
+
+- `GET /portal/login` — two-step form: email+phone+name ->
+  `POST /web/auth/request-code`, then the 6-digit code ->
+  `POST /web/auth/verify-code`. On success stores `session_token` in
+  `localStorage` and redirects to `/portal`.
+- `GET /portal` — dashboard: fetches `GET /web/cases`, renders each as a
+  card linking to its detail page.
+- `GET /portal/case/{id}` — fetches `GET /web/case/{id}/timeline`, renders
+  `state`/`escalation_reason` plus the message log. The message-send box
+  (posts to `POST /web/chat`) is hidden once `state == "close"`: `/web/
+  chat` always routes to the caller's one active case (see above), so
+  messaging from a closed case's page would silently land in the intake
+  flow instead — the UI hides that trap rather than let it happen.
+
+Free-text/counterparty-sourced fields (`counterparty_name`,
+`item_description`, message `content`, `escalation_reason`) are run
+through a small `dosEscape()` helper before being placed in `innerHTML` —
+these values did not originate from us, so they're not trusted HTML.
 
 ## Landing + waitlist (`app/public/`)
 
