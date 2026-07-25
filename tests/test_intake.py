@@ -290,6 +290,7 @@ def test_run_intake_turn_includes_vault_block(make_user):
     # 07-Fiyatlama (PR-B) and 08-Musteri-Profilleri (PR-D) both have real content now.
     assert vault_paths == {
         "07-Fiyatlama/arac-bae.md",
+        "07-Fiyatlama/ikinci-el.md",
         "07-Fiyatlama/kira-bae.md",
         "08-Musteri-Profilleri/segmentler.md",
     }

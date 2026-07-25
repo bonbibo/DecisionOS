@@ -320,6 +320,11 @@ def test_run_turn_includes_vault_block_for_every_subagent_call(new_case):
         "01-Playbooks/taktikler/TK-001-rakip-teklif.md",
         "01-Playbooks/taktikler/TK-002-kosul-takasi.md",
         "01-Playbooks/taktikler/TK-003-sessizlik-deadline.md",
+        "01-Playbooks/taktikler/TK-101-paralel-bayi.md",
+        "01-Playbooks/taktikler/TK-102-otd-ayristirma.md",
+        "01-Playbooks/taktikler/TK-103-ay-sonu.md",
+        "01-Playbooks/taktikler/TK-201-nakit-bugun.md",
+        "01-Playbooks/taktikler/TK-202-kusur-gerekce.md",
     }
 
 

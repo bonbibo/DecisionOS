@@ -110,6 +110,7 @@ def test_stratejist_vault_block_includes_both_real_active_decisions(new_case):
     assert decision_paths == {
         "06-Kararlar/KR-001-fiyatlama-modeli.md",
         "06-Kararlar/KR-002-dikey-sirasi.md",
+        "06-Kararlar/KR-005-dikey-radar.md",
     }
 
 
@@ -132,4 +133,5 @@ def test_kritik_vault_block_includes_both_real_active_decisions(new_case):
     assert decision_paths == {
         "06-Kararlar/KR-001-fiyatlama-modeli.md",
         "06-Kararlar/KR-002-dikey-sirasi.md",
+        "06-Kararlar/KR-005-dikey-radar.md",
     }

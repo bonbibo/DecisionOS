@@ -17,6 +17,11 @@ def test_read_for_role_yazici_gets_only_taktikler():
         "01-Playbooks/taktikler/TK-001-rakip-teklif.md",
         "01-Playbooks/taktikler/TK-002-kosul-takasi.md",
         "01-Playbooks/taktikler/TK-003-sessizlik-deadline.md",
+        "01-Playbooks/taktikler/TK-101-paralel-bayi.md",
+        "01-Playbooks/taktikler/TK-102-otd-ayristirma.md",
+        "01-Playbooks/taktikler/TK-103-ay-sonu.md",
+        "01-Playbooks/taktikler/TK-201-nakit-bugun.md",
+        "01-Playbooks/taktikler/TK-202-kusur-gerekce.md",
     ]
 
 
@@ -88,12 +93,11 @@ def test_load_playbooks_wrapper_matches_vaultreader_and_warns():
     with pytest.warns(DeprecationWarning):
         playbooks = load_playbooks(VAULT_DIR)
 
-    assert len(playbooks) == 1
-    assert playbooks[0].playbook_id == "PB-kira-bae"
+    assert {p.playbook_id for p in playbooks} == {"PB-kira-bae", "PB-arac-bae", "PB-ikinci-el"}
 
     direct = VaultReader(VAULT_DIR).read_folder("01-Playbooks", recursive=False)
-    assert len(direct.documents) == 1
-    assert direct.documents[0].frontmatter["playbook_id"] == playbooks[0].playbook_id
+    assert len(direct.documents) == len(playbooks)
+    assert {d.frontmatter["playbook_id"] for d in direct.documents} == {p.playbook_id for p in playbooks}
 
 
 def test_load_profiles_wrapper_matches_vaultreader_and_warns():

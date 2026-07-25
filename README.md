@@ -167,9 +167,13 @@ consistent prompt-cache behavior across turns.
 vault/
   _manifest.md               role -> folder mapping (edit this to add a folder for a role)
   01-Playbooks/
-    kira-bae.md              playbook note (anchor strategy, concession ladder, red lines)
+    kira-bae.md              playbook note (anchor strategy, concession ladder, red lines) — durum: aktif
+    arac-bae.md               BAE araç pazarlığı playbook (Dikey Paketi) — durum: demo
+    ikinci-el.md               Dubizzle/marketplace playbook (Dikey Paketi) — durum: demo
     taktikler/
-      TK-001-*.md, TK-002-*.md, TK-003-*.md   tactic notes
+      TK-001-*.md, TK-002-*.md, TK-003-*.md   kira-bae tactic notes (durum: aktif)
+      TK-101-*.md .. TK-103-*.md               arac-bae tactic notes (durum: demo)
+      TK-201-*.md, TK-202-*.md                 ikinci-el tactic notes (durum: demo)
   02-Cases/                  case log (filled in per case; empty for now)
   03-Retros/                 post-case retros (filled in by the Kütüphaneci agent per case)
   04-Karsi-Taraf/
@@ -179,9 +183,13 @@ vault/
   06-Kararlar/
     KR-001-fiyatlama-modeli.md   pricing model decision (durum: aktif)
     KR-002-dikey-sirasi.md       vertical rollout order decision (durum: aktif)
+    KR-003-ses-kanali-esigi.md    voice-escalation threshold (durum: taslak)
+    KR-004-sirket-kimligi.md      company identity (durum: taslak)
+    KR-005-dikey-radar.md         8-vertical expansion radar + activation gates (Dikey Paketi, durum: aktif)
   07-Fiyatlama/
     kira-bae.md                pricing model (`durum: aktif`) — success fee % / min fee / flat alternative
-    arac-bae.md                second-vertical demo pricing (`durum: demo`) — not offered to real customers
+    arac-bae.md                success-fee pricing (`durum: demo`) — not offered to real customers
+    ikinci-el.md                subscription pricing (`durum: taslak`, Dikey Paketi) — below even the demo bar
   08-Musteri-Profilleri/
     segmentler.md               customer segments (S1/S2/S3, no frontmatter — our own customer,
                                    not the counterparty; see 04-Karsi-Taraf for that)
@@ -212,6 +220,29 @@ note that isn't `durum: aktif` before it reaches a subagent payload — a
 `taslak`/`iptal`/`gozden-gecirilecek` decision is vault history, not live
 context. Every other folder is passed through untouched; this filter is
 `06-Kararlar/`-specific, not a generic `durum` filter.
+
+### Verticals beyond kira-bae (Dikey Paketi)
+
+`kira-bae` is the only vertical live to real customers (`KR-002`). Two more
+now have full playbook/tactic/pricing content, both gated `durum: demo` or
+`taslak` so the existing `durum: aktif` checks in `app.intake._select_pricing`,
+`app.orchestrator`/`app.intake`'s playbook lookup, and `app.payments`'s
+pre-auth pricing lookup keep them out of real-customer flow automatically —
+no code change needed to add or gate a vertical, only vault content:
+
+- **`arac-bae`** (BAE araç pazarlığı): playbook + `TK-101`/`TK-102`/`TK-103`
+  + `07-Fiyatlama/arac-bae.md` (success fee, `durum: demo` — only
+  `Case.is_demo=true` cases may use it, same restriction as before).
+- **`ikinci-el`** (Dubizzle/marketplace, buyer side only): playbook +
+  `TK-201`/`TK-202` + `07-Fiyatlama/ikinci-el.md` (subscription model,
+  `durum: taslak` — a step below even `demo`, since low-ticket items don't
+  fit the success-fee model at all; see the pricing note).
+
+`06-Kararlar/KR-005-dikey-radar.md` ranks 8 candidate verticals and records
+the activation gates for the next ones in line (kira-bae win rate/case-count
+thresholds, then a separate gate for the ikinci-el subscription once
+kira-bae+arac-bae are both live) — consistent with, and more granular than,
+`KR-002`'s original single-vertical-at-a-time call.
 
 ### Customer segments (`08-Musteri-Profilleri/`)
 
