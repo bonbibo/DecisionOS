@@ -3,7 +3,7 @@ taktik_id: TK-000
 ad: 
 dikey: kira-bae
 asama: anchoring   # discovery | anchoring | counter | concession | close
-durum: taslak      # taslak | aktif | pasif
+durum: taslak      # taslak | demo | aktif | pasif
 kullanilma_sayisi: 0
 basari_sayisi: 0
 basari_orani: 0.0
