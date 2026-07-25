@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}DecisionOS — Panelim{% endblock %}</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; max-width: 40rem; margin: 0 auto;
+         padding: 2rem 1.25rem 5rem; color: #1a1a1a; line-height: 1.55; }
+  nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;
+        padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+  nav a { color: #1a1a1a; text-decoration: none; font-weight: 600; }
+  nav button { background: none; border: none; color: #666; font: inherit; cursor: pointer; }
+  h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+  input, textarea { width: 100%; box-sizing: border-box; padding: 0.6rem; margin-bottom: 0.75rem;
+    border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+  button.primary { padding: 0.75rem 1.5rem; background: #1a1a1a; color: #fff; border: none;
+    border-radius: 6px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+  .status { margin-top: 0.75rem; font-size: 0.9rem; color: #b00; }
+  .card { background: #f7f7f8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .card a { color: #1a1a1a; text-decoration: none; }
+  .badge { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 999px; background: #eee;
+    font-size: 0.8em; margin-left: 0.4rem; }
+  .badge.escalated { background: #fde2e2; }
+  .muted { color: #777; font-size: 0.9em; }
+  .empty { color: #777; padding: 2rem 0; text-align: center; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/portal">DecisionOS</a>
+  <button type="button" onclick="dosLogout()">Çıkış yap</button>
+</nav>
+{% block content %}{% endblock %}
+<script>
+function dosLogout() {
+  localStorage.removeItem('dos_session_token');
+  localStorage.removeItem('dos_user_email');
+  window.location.href = '/portal/login';
+}
+
+function dosToken() {
+  return localStorage.getItem('dos_session_token');
+}
+
+// Case/message content comes from counterparties and free-text intake, not
+// from us — never interpolate it into innerHTML without this.
+function dosEscape(s) {
+  var div = document.createElement('div');
+  div.textContent = s === null || s === undefined ? '' : String(s);
+  return div.innerHTML;
+}
+
+async function dosFetch(url, options) {
+  options = options || {};
+  options.headers = Object.assign({}, options.headers, { 'Authorization': 'Bearer ' + dosToken() });
+  const resp = await fetch(url, options);
+  if (resp.status === 401) {
+    dosLogout();
+    throw new Error('oturum süresi doldu');
+  }
+  return resp;
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

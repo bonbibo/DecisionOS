@@ -1,0 +1,41 @@
+{% extends "_base.html" %}
+{% block title %}Vakalarım — DecisionOS{% endblock %}
+{% block content %}
+<h1>Vakalarım</h1>
+<div id="cases"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(async function () {
+  if (!dosToken()) {
+    window.location.href = '/portal/login';
+    return;
+  }
+
+  var container = document.getElementById('cases');
+  try {
+    var resp = await dosFetch('/web/cases');
+    if (!resp.ok) {
+      container.innerHTML = '<p class="status">Vakalar yüklenemedi.</p>';
+      return;
+    }
+    var cases = await resp.json();
+    if (cases.length === 0) {
+      container.innerHTML = '<p class="empty">Henüz bir vakanız yok.</p>';
+      return;
+    }
+    container.innerHTML = cases.map(function (c) {
+      var title = dosEscape(c.counterparty_name || c.counterparty_contact);
+      var badge = c.escalated ? '<span class="badge escalated">bekleyen soru</span>' : '';
+      var detail = dosEscape(c.state) + (c.item_description ? ' &middot; ' + dosEscape(c.item_description) : '');
+      return '<div class="card"><a href="/portal/case/' + encodeURIComponent(c.id) + '">' +
+        '<strong>' + title + '</strong>' + badge +
+        '<div class="muted">' + detail + '</div>' +
+        '</a></div>';
+    }).join('');
+  } catch (err) {
+    // dosFetch already redirected to /portal/login on 401.
+  }
+})();
+</script>
+{% endblock %}

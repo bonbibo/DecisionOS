@@ -10,6 +10,7 @@ from app.health import run_health_checks
 from app.logging_utils import RequestIdMiddleware, configure_logging
 from app.models import Case
 from app.payments import router as payments_router
+from app.portal import router as portal_router
 from app.public import router as public_router
 from app.review import router as review_router
 from app.schemas import CaseCreate, CaseRead
@@ -28,6 +29,7 @@ app.include_router(admin_router)
 app.include_router(payments_router)
 app.include_router(optin.router)
 app.include_router(public_router)
+app.include_router(portal_router)
 
 
 @app.get("/health")
