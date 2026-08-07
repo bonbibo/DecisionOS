@@ -1,8 +1,0 @@
-{
-  "RecordingsRoot": "D:\\TaskRecordings",
-  "RepoPath": "C:\\Projects\\MyGame",
-  "ObsEnabled": true,
-  "ObsHost": "localhost",
-  "ObsPort": 4455,
-  "ObsPassword": null
-}
