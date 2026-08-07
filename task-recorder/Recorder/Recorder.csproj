@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TaskRecorder</AssemblyName>
+    <RootNamespace>TaskRecorder</RootNamespace>
+    <ApplicationIcon />
+    <!--
+      Windows-only by design: global low-level mouse/keyboard hooks (WH_MOUSE_LL / WH_KEYBOARD_LL)
+      are Win32 APIs. Not portable to macOS/Linux without a different input-capture backend.
+    -->
+  </PropertyGroup>
+
+</Project>
