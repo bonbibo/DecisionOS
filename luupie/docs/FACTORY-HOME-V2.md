@@ -160,6 +160,14 @@ düşer ve orada kalır. Oyuncu tampon yüzdesini hiç okumadan bilir.
 
 ## 5. İstasyon çekmecesi
 
+> ⚠️ **Bu bölüm `EKRAN-MODELI-V3.md` tarafından geçersiz kılındı.** Yönelim
+> kararı değişti: alt çekmece yerine Hay Day tarzı ortalanmış büyük panel
+> (%66 × %90) kullanılıyor. Aşağıdaki çekmece ölçüleri artık geçerli değil;
+> içerik kuralları (işçi şeridi, delta önizlemesi, neyin olmayacağı) V3'te
+> korunuyor.
+
+
+
 Yataydaki en büyük yapısal kazanç. Dikeyde çekmece `430 × 307` dikdörtgendi ve
 içerik dikey istiflenmek zorundaydı. Yatayda `932 × 164` olur — **geniş ve
 alçak**. Her şey tek satıra dizilir.
