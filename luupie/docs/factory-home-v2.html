@@ -1,4 +1,4 @@
-<title>Luupie — Factory Home V2 · UX/UI Planı</title>
+<title>Luupie — Factory Home V2 · Yatay UX/UI Planı</title>
 
 <style>
   :root {
@@ -67,14 +67,9 @@
   * { box-sizing: border-box; }
 
   body {
-    background: var(--ground);
-    color: var(--ink);
-    font-family: var(--f-body);
-    font-size: 16px;
-    line-height: 1.65;
-    margin: 0;
-    padding: 0 20px 96px;
-    -webkit-font-smoothing: antialiased;
+    background: var(--ground); color: var(--ink);
+    font-family: var(--f-body); font-size: 16px; line-height: 1.65;
+    margin: 0; padding: 0 20px 96px; -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 1080px; margin: 0 auto; }
 
@@ -160,9 +155,7 @@
     overflow-x: auto; background: var(--surface);
     border: 1px solid var(--rule); padding: 20px 16px;
   }
-  .figure svg { display: block; width: 100%; height: auto; }
-  .fig-tall svg { min-width: 620px; }
-  .fig-wide svg { min-width: 680px; }
+  .figure svg { display: block; width: 100%; height: auto; min-width: 660px; }
   figcaption { font-size: 13px; color: var(--ink-2); margin-top: 10px; max-width: var(--col); }
 
   .beat { display: flex; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--rule); }
@@ -180,14 +173,25 @@
   }
 
   .rule-list { counter-reset: r; list-style: none; padding: 0; max-width: var(--col); }
-  .rule-list li {
-    counter-increment: r; position: relative; padding-left: 34px; margin-bottom: 12px;
-  }
+  .rule-list li { counter-increment: r; position: relative; padding-left: 34px; margin-bottom: 12px; }
   .rule-list li::before {
     content: counter(r, decimal-leading-zero);
     position: absolute; left: 0; top: 1px;
     font-family: var(--f-mono); font-size: 11px; color: var(--accent);
   }
+
+  .swap { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin-bottom: 18px; }
+  .swap-cell {
+    border: 1px solid var(--rule); background: var(--surface);
+    padding: 12px 14px; font-size: 13.5px;
+  }
+  .swap-cell .t {
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 4px;
+  }
+  .swap-cell.old { color: var(--ink-2); }
+  .swap-cell.new { border-color: var(--accent); }
+  .swap-arrow { font-family: var(--f-mono); color: var(--accent); font-size: 18px; }
 
   a { color: var(--accent); }
   a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -195,382 +199,450 @@
   @media (max-width: 620px) {
     .beat { flex-direction: column; gap: 2px; }
     .beat-time { width: auto; }
+    .swap { grid-template-columns: 1fr; }
+    .swap-arrow { display: none; }
   }
 </style>
 
 <div class="wrap">
 
 <header class="masthead">
-  <p class="eyebrow">Luupie · UX/UI Planı · Factory Home V2</p>
-  <h1>Fabrikayı ekranın merkezine geri koymak</h1>
-  <p class="standfirst">Çekirdek mekanik doğru, yeri yanlış. Bu plan darboğazlı üretim zincirini istatistik panelinden çıkarıp izometrik sahnenin kendisine taşıyan ekran hiyerarşisini, bileşen anatomilerini ve etkileşim kurallarını tanımlar.</p>
+  <p class="eyebrow">Luupie · UX/UI Planı · Factory Home V2 · Yatay</p>
+  <h1>Hat zaten yatay akıyordu</h1>
+  <p class="standfirst">Yönelim yataya döndü. Bant istifi ölür, yerine tam ekran sahne ve köşelere demirlenmiş yüzen arayüz gelir. Üretim zinciri artık soldan sağa okunur — darboğaz tarifi mekânsal hale gelir.</p>
 </header>
 
 <section>
-  <div class="sec-head"><span class="sec-num">00</span><h2>Tek cümlelik ilke</h2></div>
+  <div class="sec-head"><span class="sec-num">00</span><h2>Değişimin bilançosu</h2></div>
 
-  <div class="panel is-accent">
-    <p class="panel-label">Tasarım anayasası</p>
-    <p style="font-size:18px; margin-bottom:10px"><strong>Fabrikanın durumu hakkındaki hiçbir bilgi, önce sahnede görünmeden bir panelde sayı olarak gösterilemez.</strong></p>
-    <p>Panel sahnede görüneni <em>doğrular ve ölçer</em>; asla ilk kaynak olmaz. Oyuncu bir sorunu ancak fabrikaya bakarak fark edebilmeli, paneli sadece “ne kadar kötü?” sorusuna cevap için açmalı.</p>
+  <p>Yatay bu oyun için bedava değil. Karar verilmiş; planı ona göre kurdum, ama iki sonucu baştan yazıyorum çünkü ikisi de tasarımı değiştiriyor.</p>
+
+  <div class="grid-2">
+    <div class="panel is-flow">
+      <p class="panel-label">Kazanç</p>
+      <ul>
+        <li><strong>Zincir doğal yönünü bulur.</strong> Dikeyde hattı katlamak zorundaydım; yatayda 4 istasyon soldan sağa dizilir.</li>
+        <li><strong>Darboğaz okuması mekânsal olur:</strong> solunda yığılma, sağında açlık — kelimenin tam anlamıyla.</li>
+        <li><strong>Fabrika %62 değil %100</strong> alan kaplar; arayüz üstünde yüzer.</li>
+        <li><strong>Çekmece geniş ve alçak olur</strong> — her şey tek satırda, kaydırmasız.</li>
+        <li>İleride 6 istasyona çıkmak düzeni bozmaz.</li>
+      </ul>
+    </div>
+    <div class="panel is-jam">
+      <p class="panel-label">Bedel</p>
+      <ul>
+        <li><strong>Tek elle oynanış biter.</strong> Konsept dokümanının açık tercihiydi.</li>
+        <li><strong>Dikey alan kıtlaşır:</strong> 430 px'e beş bant sığmaz — istif yerine kaplama zorunlu.</li>
+        <li><strong>40 saniyelik seans zayıflar.</strong> Kimse 40 saniye için telefonu çevirmez.</li>
+        <li>Üst-orta bölge başparmakla erişilemez hale gelir; durum ile eylem ayrışmak zorunda.</li>
+      </ul>
+    </div>
   </div>
 
-  <p>Bu ilke tek başına brief'teki sekiz kırılma noktasının yedisini kapatır. Geri kalanı ekonominin tek satış noktasına indirgenmesidir.</p>
+  <div class="panel is-accent">
+    <p class="panel-label">Bunun tasarıma yansıması</p>
+    <p>Oyun “günde 6 kısa bakış”tan “günde 2–3 gerçek oturum”a kayar. Bu bir kayıp değil, farklı bir retansiyon modeli — ama <strong>sipariş sınıf karışımı buna göre yeniden dengelenmeli</strong> (bkz. bölüm 11). Aksi halde 5 dakikalık hızlı siparişler boşa düşer.</p>
+  </div>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">01</span><h2>Ekran anatomisi</h2></div>
+  <div class="sec-head"><span class="sec-num">01</span><h2>Yeni yapı ilkesi</h2></div>
 
-  <p>Referans cihaz <code>430 × 932</code>. Güvenli alan düşüldükten sonra kullanılabilir yükseklik <code>839 px</code>.</p>
+  <p>Dikey planın “bant istifi” yaklaşımı burada geçersiz. Yerine geçen ilke:</p>
 
-  <figure class="figure fig-tall">
-    <div class="figure-scroll">
-      <svg viewBox="0 0 800 715" role="img" aria-label="Factory Home V2 dikey ekran bantları: kaynak HUD, aktif sipariş şeridi, canlı izometrik fabrika, vardiya kartları ve üç sekmeli navigasyon.">
-        <!-- telefon gövdesi -->
-        <rect x="24" y="20" width="310" height="671" rx="26" fill="var(--surface-2)" stroke="var(--rule-strong)" stroke-width="2"/>
-
-        <!-- üst güvenli alan -->
-        <rect x="26" y="22" width="306" height="40" fill="none"/>
-        <text x="179" y="47" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">güvenli alan · 59 px</text>
-        <line x1="26" y1="62" x2="332" y2="62" stroke="var(--wire)" stroke-width="1" stroke-dasharray="3 3"/>
-
-        <!-- HUD -->
-        <rect x="26" y="62" width="306" height="46" fill="var(--surface)" stroke="var(--wire)" stroke-width="1"/>
-        <circle cx="52" cy="85" r="9" fill="none" stroke="var(--wire)"/>
-        <rect x="68" y="79" width="34" height="12" fill="var(--wire)" opacity=".3"/>
-        <circle cx="128" cy="85" r="9" fill="none" stroke="var(--wire)"/>
-        <rect x="144" y="79" width="30" height="12" fill="var(--wire)" opacity=".3"/>
-        <rect x="264" y="72" width="56" height="26" fill="var(--accent)" opacity=".25" stroke="var(--accent)"/>
-        <text x="292" y="90" font-family="var(--f-mono)" font-size="9" fill="var(--accent)" text-anchor="middle">KASA 3</text>
-
-        <!-- Sipariş şeridi -->
-        <rect x="26" y="108" width="306" height="50" fill="var(--flow-soft)" stroke="var(--flow)" stroke-width="1.5"/>
-        <circle cx="52" cy="133" r="13" fill="none" stroke="var(--flow)"/>
-        <rect x="76" y="118" width="120" height="9" fill="var(--wire)" opacity=".45"/>
-        <rect x="76" y="133" width="150" height="8" fill="var(--surface)" stroke="var(--flow)" stroke-width="1"/>
-        <rect x="77" y="134" width="94" height="6" fill="var(--flow)"/>
-        <text x="76" y="153" font-family="var(--f-mono)" font-size="8.5" fill="var(--ink-2)">14/20 · ~12 dk</text>
-        <rect x="270" y="122" width="50" height="22" fill="var(--accent)" opacity=".25" stroke="var(--accent)"/>
-
-        <!-- FABRİKA -->
-        <rect x="26" y="158" width="306" height="374" fill="var(--ground)" stroke="var(--accent)" stroke-width="2.5"/>
-        <!-- iso zemin -->
-        <path d="M179 210 L318 300 L179 390 L40 300 Z" fill="var(--surface-2)" stroke="var(--wire)" stroke-width="1"/>
-        <!-- istasyonlar -->
-        <rect x="74" y="248" width="40" height="30" fill="var(--surface)" stroke="var(--flow)" stroke-width="1.5"/>
-        <rect x="134" y="272" width="40" height="30" fill="var(--surface)" stroke="var(--flow)" stroke-width="1.5"/>
-        <rect x="194" y="296" width="40" height="30" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="2.5"/>
-        <rect x="252" y="272" width="40" height="30" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5"/>
-        <!-- tampon yığını -->
-        <rect x="180" y="318" width="7" height="7" fill="var(--jam)"/>
-        <rect x="180" y="328" width="7" height="7" fill="var(--jam)"/>
-        <rect x="189" y="323" width="7" height="7" fill="var(--jam)"/>
-        <!-- işçiler -->
-        <circle cx="94" cy="240" r="7" fill="var(--flow)" opacity=".65"/>
-        <circle cx="154" cy="264" r="7" fill="var(--flow)" opacity=".65"/>
-        <circle cx="272" cy="264" r="7" fill="var(--ink-3)" opacity=".5"/>
-        <!-- kasa -->
-        <rect x="60" y="352" width="22" height="18" fill="var(--accent)" opacity=".4" stroke="var(--accent)"/>
-        <text x="179" y="430" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">canlı izometrik fabrika</text>
-        <text x="179" y="446" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">istasyon · işçi · tampon · kasa</text>
-
-        <!-- Vardiya kartları -->
-        <rect x="26" y="532" width="306" height="75" fill="var(--surface)" stroke="var(--wire)" stroke-width="1"/>
-        <rect x="36" y="542" width="92" height="55" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="1.5"/>
-        <rect x="136" y="542" width="92" height="55" fill="var(--surface-2)" stroke="var(--wire)"/>
-        <rect x="236" y="542" width="92" height="55" fill="var(--surface-2)" stroke="var(--wire)"/>
-        <text x="82" y="574" font-family="var(--f-mono)" font-size="8" fill="var(--jam)" text-anchor="middle">TIKANDI</text>
-
-        <!-- Nav -->
-        <rect x="26" y="607" width="306" height="60" fill="var(--surface-2)" stroke="var(--wire)" stroke-width="1"/>
-        <rect x="40" y="620" width="88" height="34" fill="var(--accent)" opacity=".22" stroke="var(--accent)"/>
-        <text x="84" y="641" font-family="var(--f-mono)" font-size="9" fill="var(--accent)" text-anchor="middle">FABRİKA</text>
-        <text x="179" y="641" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)" text-anchor="middle">ŞEHİR</text>
-        <text x="274" y="641" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)" text-anchor="middle">LUUPIES</text>
-        <line x1="26" y1="667" x2="332" y2="667" stroke="var(--wire)" stroke-width="1" stroke-dasharray="3 3"/>
-        <text x="179" y="682" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)" text-anchor="middle">home indicator · 34 px</text>
-
-        <!-- ÖLÇÜ NOTLARI -->
-        <g font-family="var(--f-mono)" font-size="11.5">
-          <line x1="334" y1="85" x2="376" y2="85" stroke="var(--wire)"/>
-          <text x="384" y="82" fill="var(--ink)">Kaynak HUD</text>
-          <text x="384" y="97" fill="var(--ink-3)">64 px · %8 — sabit, min 56</text>
-
-          <line x1="334" y1="133" x2="376" y2="133" stroke="var(--flow)"/>
-          <text x="384" y="130" fill="var(--ink)">Aktif sipariş şeridi</text>
-          <text x="384" y="145" fill="var(--ink-3)">68 px · %8 — sabit, min 52</text>
-
-          <line x1="334" y1="345" x2="376" y2="345" stroke="var(--accent)" stroke-width="1.5"/>
-          <text x="384" y="330" fill="var(--accent)" font-weight="700">Canlı fabrika</text>
-          <text x="384" y="345" fill="var(--ink-3)">520 px · %62 — esnek</text>
-          <text x="384" y="360" fill="var(--jam)">garanti: asla &lt; 420 px</text>
-
-          <line x1="334" y1="569" x2="376" y2="569" stroke="var(--wire)"/>
-          <text x="384" y="566" fill="var(--ink)">Vardiya kartları</text>
-          <text x="384" y="581" fill="var(--ink-3)">104 px · %12 — kart yoksa 0</text>
-
-          <line x1="334" y1="637" x2="376" y2="637" stroke="var(--wire)"/>
-          <text x="384" y="634" fill="var(--ink)">Navigasyon</text>
-          <text x="384" y="649" fill="var(--ink-3)">84 px · %10 — üç sekme</text>
-        </g>
-
-        <!-- kural kutusu -->
-        <rect x="384" y="180" width="392" height="118" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
-        <text x="398" y="203" font-family="var(--f-mono)" font-size="10" letter-spacing="1.4" fill="var(--accent)">DARALMA SIRASI</text>
-        <text x="398" y="226" font-family="var(--f-mono)" font-size="11" fill="var(--ink)">Küçük ekranda önce vardiya kartları</text>
-        <text x="398" y="243" font-family="var(--f-mono)" font-size="11" fill="var(--ink)">tek satıra iner (104 → 56),</text>
-        <text x="398" y="260" font-family="var(--f-mono)" font-size="11" fill="var(--ink)">sonra sipariş şeridi (68 → 52).</text>
-        <text x="398" y="283" font-family="var(--f-mono)" font-size="11" fill="var(--jam)" font-weight="700">Fabrika bandı en son daralır.</text>
-      </svg>
+  <div class="swap">
+    <div class="swap-cell old">
+      <span class="t">Dikeyde</span>
+      Beş yatay bant üst üste istiflenir; her bant kendi yüksekliğini fabrikadan çalar. Fabrika %62.
     </div>
-    <figcaption>Yüzdeler referans cihazdaki hedeftir; uygulamada bantlar sabit piksel, fabrika esnek olmalı. Saf yüzde küçük ekranlarda fabrikayı 372 px'e düşürür ve izometrik sahne okunmaz hale gelir — bu yüzden 420 px taban garantisi konur.</figcaption>
-  </figure>
+    <div class="swap-arrow">→</div>
+    <div class="swap-cell new">
+      <span class="t">Yatayda</span>
+      Sahne tüm ekranı kaplar; arayüz köşelere demirlenmiş <strong>yüzen adalar</strong> olur. Fabrika %100, kaplama ≤%22.
+    </div>
+  </div>
 
-  <h3>Fabrika bandının kuralları</h3>
+  <p>Ve iki kural bunu ayakta tutar. Bölüm 0'daki tek cümlelik ilke — <em>hiçbir bilgi sahnede görünmeden panelde sayı olmaz</em> — aynen geçerli, üstüne şunlar biner:</p>
+
   <ol class="rule-list">
-    <li><strong>Kamera sabit.</strong> Serbest pan/zoom yok. Tüm hat tek bakışta görünür; oyuncu bir şey aramak için sürüklemek zorunda kalmaz.</li>
-    <li><strong>Her istasyon bir hotspot.</strong> Dokunma hedefi minimum <code>44 × 44 px</code>, istasyonun görsel sınırından bağımsız olarak.</li>
-    <li><strong>Ürünler gerçekten hareket eder.</strong> Bant üstündeki oyuncaklar sahte döngü animasyonu değil, gerçek üretim sayacına bağlı olmalı — hat hızlanınca ürün aralığı gözle görülür şekilde sıklaşır.</li>
-    <li><strong>Hiçbir durum yalnızca renkle anlatılmaz.</strong> Her durumun ikinci bir kanalı var: yoğunluk, hareket, duruş veya duman.</li>
+    <li><strong>Zincir bandı dokunulmazdır.</strong> Ekranın dikey ortasındaki <code>~180 px</code>'lik şerit — istasyonların, bandın ve tamponların yaşadığı yer — hiçbir arayüz öğesiyle örtülmez. Çekmece bile oraya girmez.</li>
+    <li><strong>Durum üstte, eylem alt köşelerde.</strong> Yatayda üst-orta başparmakla erişilemez. Okunacak şey üst kenara, dokunulacak şey alt köşelere gider — ikisi aynı öğe olamaz.</li>
   </ol>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">02</span><h2>Darboğaz görsel dili</h2></div>
+  <div class="sec-head"><span class="sec-num">02</span><h2>Ekran anatomisi</h2></div>
 
-  <p>Bu bölüm planın kalbi. Oyuncu fabrikaya baktığında <strong>tek kelime okumadan</strong> ne olduğunu anlamalı.</p>
+  <p>Referans cihaz <code>932 × 430</code> yatay. iOS yatayda simetrik yan güvenli alan uygular: her iki yandan <code>59 px</code>, altta home indicator <code>21 px</code>. Kullanılabilir alan <code>814 × 409</code>.</p>
 
-  <figure class="figure fig-wide">
+  <figure class="figure">
     <div class="figure-scroll">
-      <svg viewBox="0 0 760 250" role="img" aria-label="Üç istasyon durumu: akışta, yığılma, aç kalma. Her durumun bant yoğunluğu, tampon yüksekliği ve işçi duruşu ile nasıl okunduğu.">
-        <!-- AKIŞTA -->
-        <g>
-          <rect x="10" y="14" width="230" height="188" fill="var(--flow-soft)" stroke="var(--flow)" stroke-width="1.5"/>
-          <text x="26" y="38" font-family="var(--f-mono)" font-size="11" letter-spacing="1.2" fill="var(--flow)">AKIŞTA</text>
-          <line x1="26" y1="96" x2="224" y2="96" stroke="var(--wire)" stroke-width="3"/>
-          <rect x="44" y="82" width="12" height="12" fill="var(--flow)"/>
-          <rect x="96" y="82" width="12" height="12" fill="var(--flow)"/>
-          <rect x="148" y="82" width="12" height="12" fill="var(--flow)"/>
-          <rect x="200" y="82" width="12" height="12" fill="var(--flow)"/>
-          <rect x="26" y="120" width="10" height="10" fill="var(--flow)" opacity=".7"/>
-          <rect x="26" y="132" width="10" height="10" fill="var(--flow)" opacity=".7"/>
-          <circle cx="130" cy="136" r="11" fill="var(--flow)" opacity=".55"/>
-          <text x="26" y="170" font-family="var(--f-mono)" font-size="10" fill="var(--ink-2)">düzenli aralık · tampon %30</text>
-          <text x="26" y="186" font-family="var(--f-mono)" font-size="10" fill="var(--ink-2)">işçi ritmik çalışıyor</text>
-        </g>
+      <svg viewBox="0 0 760 500" role="img" aria-label="Yatay ekran anatomisi: tam ekran izometrik fabrika üzerinde köşelere demirlenmiş yüzen arayüz adaları; dört istasyon soldan sağa dizili.">
+        <!-- cihaz -->
+        <rect x="40" y="16" width="680" height="314" rx="22" fill="var(--ground)" stroke="var(--rule-strong)" stroke-width="2"/>
+        <!-- güvenli alanlar -->
+        <line x1="83" y1="18" x2="83" y2="328" stroke="var(--wire)" stroke-dasharray="3 3"/>
+        <line x1="677" y1="18" x2="677" y2="328" stroke="var(--wire)" stroke-dasharray="3 3"/>
+        <line x1="42" y1="315" x2="718" y2="315" stroke="var(--wire)" stroke-dasharray="3 3"/>
+        <text x="61" y="180" font-family="var(--f-mono)" font-size="8" fill="var(--ink-3)" text-anchor="middle" transform="rotate(-90 61 180)">güvenli 59</text>
+        <text x="699" y="180" font-family="var(--f-mono)" font-size="8" fill="var(--ink-3)" text-anchor="middle" transform="rotate(-90 699 180)">güvenli 59</text>
 
-        <!-- YIĞILMA -->
-        <g>
-          <rect x="264" y="14" width="230" height="188" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="2.5"/>
-          <text x="280" y="38" font-family="var(--f-mono)" font-size="11" letter-spacing="1.2" font-weight="700" fill="var(--jam)">YIĞILMA · DARBOĞAZ</text>
-          <line x1="280" y1="96" x2="478" y2="96" stroke="var(--wire)" stroke-width="3"/>
-          <rect x="286" y="82" width="12" height="12" fill="var(--jam)"/>
-          <rect x="300" y="82" width="12" height="12" fill="var(--jam)"/>
-          <rect x="314" y="82" width="12" height="12" fill="var(--jam)"/>
-          <rect x="328" y="82" width="12" height="12" fill="var(--jam)"/>
-          <rect x="342" y="82" width="12" height="12" fill="var(--jam)"/>
-          <rect x="356" y="82" width="12" height="12" fill="var(--jam)"/>
-          <rect x="280" y="108" width="10" height="10" fill="var(--jam)"/>
-          <rect x="280" y="120" width="10" height="10" fill="var(--jam)"/>
-          <rect x="280" y="132" width="10" height="10" fill="var(--jam)"/>
-          <rect x="292" y="126" width="10" height="10" fill="var(--jam)"/>
-          <rect x="292" y="138" width="10" height="10" fill="var(--jam)"/>
-          <circle cx="392" cy="136" r="11" fill="var(--jam)" opacity=".6"/>
-          <text x="410" y="132" font-family="var(--f-mono)" font-size="14" fill="var(--jam)">!</text>
-          <text x="280" y="170" font-family="var(--f-mono)" font-size="10" fill="var(--ink-2)">giriş bandı tıkalı · tampon taşıyor</text>
-          <text x="280" y="186" font-family="var(--f-mono)" font-size="10" fill="var(--ink-2)">ürünler yere düşmeye başlar</text>
-        </g>
+        <!-- ZİNCİR BANDI (dokunulmaz) -->
+        <rect x="42" y="128" width="676" height="132" fill="var(--accent)" opacity=".05"/>
+        <line x1="42" y1="128" x2="718" y2="128" stroke="var(--accent)" stroke-dasharray="4 3" opacity=".55"/>
+        <line x1="42" y1="260" x2="718" y2="260" stroke="var(--accent)" stroke-dasharray="4 3" opacity=".55"/>
 
-        <!-- AÇ KALMA -->
-        <g>
-          <rect x="518" y="14" width="230" height="188" fill="var(--surface-2)" stroke="var(--wire)" stroke-width="1.5"/>
-          <text x="534" y="38" font-family="var(--f-mono)" font-size="11" letter-spacing="1.2" fill="var(--ink-2)">AÇ KALIYOR</text>
-          <line x1="534" y1="96" x2="732" y2="96" stroke="var(--wire)" stroke-width="3"/>
-          <text x="633" y="88" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">— boş bant —</text>
-          <circle cx="600" cy="136" r="11" fill="var(--ink-3)" opacity=".45"/>
-          <text x="620" y="132" font-family="var(--f-mono)" font-size="13" fill="var(--ink-3)">zZ</text>
-          <text x="534" y="170" font-family="var(--f-mono)" font-size="10" fill="var(--ink-2)">tampon 0 · işçi bekliyor</text>
-          <text x="534" y="186" font-family="var(--f-mono)" font-size="10" fill="var(--ink-2)">saate bakma / ayak sallama</text>
-        </g>
+        <!-- iso zemin -->
+        <path d="M380 108 L690 194 L380 280 L70 194 Z" fill="var(--surface-2)" opacity=".5" stroke="var(--wire)" stroke-width="1"/>
 
-        <line x1="10" y1="224" x2="748" y2="224" stroke="var(--rule)"/>
-        <text x="10" y="243" font-family="var(--f-mono)" font-size="11" fill="var(--accent)">Darboğaz hep bu ikilinin arasındadır: solunda yığılma, sağında açlık.</text>
+        <!-- hat: 4 istasyon soldan sağa -->
+        <line x1="128" y1="196" x2="628" y2="196" stroke="var(--wire)" stroke-width="3"/>
+        <!-- 1 -->
+        <rect x="112" y="168" width="56" height="34" fill="var(--surface)" stroke="var(--flow)" stroke-width="1.5"/>
+        <circle cx="140" cy="158" r="7" fill="var(--flow)" opacity=".6"/>
+        <text x="140" y="218" font-family="var(--f-mono)" font-size="7.5" fill="var(--ink-3)" text-anchor="middle">PRES</text>
+        <!-- tampon 1 -->
+        <rect x="186" y="190" width="7" height="7" fill="var(--flow)"/>
+        <rect x="186" y="199" width="7" height="7" fill="var(--flow)"/>
+        <!-- 2 -->
+        <rect x="252" y="168" width="56" height="34" fill="var(--surface)" stroke="var(--flow)" stroke-width="1.5"/>
+        <circle cx="280" cy="158" r="7" fill="var(--flow)" opacity=".6"/>
+        <text x="280" y="218" font-family="var(--f-mono)" font-size="7.5" fill="var(--ink-3)" text-anchor="middle">DİKİŞ</text>
+        <!-- tampon 2 DOLU -->
+        <rect x="326" y="181" width="7" height="7" fill="var(--jam)"/>
+        <rect x="326" y="190" width="7" height="7" fill="var(--jam)"/>
+        <rect x="326" y="199" width="7" height="7" fill="var(--jam)"/>
+        <rect x="335" y="190" width="7" height="7" fill="var(--jam)"/>
+        <rect x="335" y="199" width="7" height="7" fill="var(--jam)"/>
+        <!-- 3 DARBOĞAZ -->
+        <rect x="392" y="166" width="56" height="38" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="2.5"/>
+        <circle cx="420" cy="156" r="7" fill="var(--jam)" opacity=".6"/>
+        <text x="420" y="220" font-family="var(--f-mono)" font-size="7.5" font-weight="700" fill="var(--jam)" text-anchor="middle">BOYA</text>
+        <text x="420" y="146" font-family="var(--f-mono)" font-size="7.5" font-weight="700" fill="var(--jam)" text-anchor="middle">▼</text>
+        <!-- tampon 3 BOŞ -->
+        <rect x="470" y="190" width="7" height="7" fill="none" stroke="var(--wire)"/>
+        <rect x="470" y="199" width="7" height="7" fill="none" stroke="var(--wire)"/>
+        <!-- 4 -->
+        <rect x="532" y="168" width="56" height="34" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5"/>
+        <circle cx="560" cy="158" r="7" fill="var(--ink-3)" opacity=".45"/>
+        <text x="560" y="218" font-family="var(--f-mono)" font-size="7.5" fill="var(--ink-3)" text-anchor="middle">PAKET</text>
+        <!-- kasa -->
+        <rect x="614" y="228" width="22" height="17" fill="var(--accent)" opacity=".4" stroke="var(--accent)"/>
+
+        <!-- ÜST SOL: HUD -->
+        <rect x="92" y="26" width="152" height="32" rx="4" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5" opacity=".97"/>
+        <circle cx="108" cy="42" r="7" fill="none" stroke="var(--wire)"/>
+        <rect x="120" y="38" width="30" height="8" fill="var(--wire)" opacity=".35"/>
+        <circle cx="168" cy="42" r="7" fill="none" stroke="var(--wire)"/>
+        <rect x="180" y="38" width="26" height="8" fill="var(--wire)" opacity=".35"/>
+
+        <!-- ÜST ORTA: sipariş şeridi -->
+        <rect x="290" y="26" width="216" height="46" rx="4" fill="var(--flow-soft)" stroke="var(--flow)" stroke-width="1.5" opacity=".97"/>
+        <circle cx="308" cy="49" r="11" fill="none" stroke="var(--flow)"/>
+        <rect x="326" y="36" width="96" height="7" fill="var(--wire)" opacity=".45"/>
+        <rect x="326" y="49" width="120" height="7" fill="var(--surface)" stroke="var(--flow)"/>
+        <rect x="327" y="50" width="76" height="5" fill="var(--flow)"/>
+        <text x="326" y="66" font-family="var(--f-mono)" font-size="7" fill="var(--ink-2)">14/20 · ~12 dk</text>
+        <rect x="458" y="38" width="38" height="20" fill="var(--accent)" opacity=".25" stroke="var(--accent)"/>
+
+        <!-- ÜST SAĞ: kasa + menü -->
+        <rect x="556" y="26" width="112" height="32" rx="4" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5" opacity=".97"/>
+        <rect x="566" y="34" width="52" height="16" fill="var(--accent)" opacity=".25" stroke="var(--accent)"/>
+        <text x="592" y="46" font-family="var(--f-mono)" font-size="7.5" fill="var(--accent)" text-anchor="middle">KASA 3</text>
+        <circle cx="646" cy="42" r="9" fill="none" stroke="var(--wire)"/>
+
+        <!-- ALT SOL: nav -->
+        <rect x="92" y="270" width="150" height="38" rx="4" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5" opacity=".97"/>
+        <rect x="98" y="276" width="44" height="26" fill="var(--accent)" opacity=".25" stroke="var(--accent)"/>
+        <text x="120" y="292" font-family="var(--f-mono)" font-size="7" fill="var(--accent)" text-anchor="middle">FABRİKA</text>
+        <text x="168" y="292" font-family="var(--f-mono)" font-size="7" fill="var(--ink-3)" text-anchor="middle">ŞEHİR</text>
+        <text x="218" y="292" font-family="var(--f-mono)" font-size="7" fill="var(--ink-3)" text-anchor="middle">LUUPIES</text>
+
+        <!-- ALT SAĞ: vardiya kartları -->
+        <rect x="404" y="268" width="264" height="40" rx="4" fill="none"/>
+        <rect x="404" y="268" width="82" height="40" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="1.5" opacity=".97"/>
+        <text x="445" y="292" font-family="var(--f-mono)" font-size="7" font-weight="700" fill="var(--jam)" text-anchor="middle">TIKANDI</text>
+        <rect x="494" y="268" width="82" height="40" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5" opacity=".97"/>
+        <rect x="584" y="268" width="84" height="40" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5" opacity=".97"/>
+
+        <!-- AÇIKLAMALAR -->
+        <g font-family="var(--f-mono)" font-size="11">
+          <text x="40" y="368" fill="var(--ink)" font-weight="700">YÜZEN ADALAR — hepsi sahnenin üstünde, hiçbiri alan çalmaz</text>
+
+          <rect x="40" y="380" width="9" height="9" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5"/>
+          <text x="56" y="389" fill="var(--ink-2)">Üst sol · Kaynak HUD · 210×44 · salt okunur</text>
+
+          <rect x="40" y="398" width="9" height="9" fill="var(--flow-soft)" stroke="var(--flow)" stroke-width="1.5"/>
+          <text x="56" y="407" fill="var(--ink-2)">Üst orta · Sipariş şeridi · 300×62 · salt okunur</text>
+
+          <rect x="40" y="416" width="9" height="9" fill="var(--surface)" stroke="var(--wire)" stroke-width="1.5"/>
+          <text x="56" y="425" fill="var(--ink-2)">Üst sağ · Kasa sayacı + menü · 140×44</text>
+
+          <rect x="400" y="380" width="9" height="9" fill="var(--accent)" opacity=".3" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="416" y="389" fill="var(--ink-2)">Alt sol · Navigasyon · 204×52 · sol başparmak</text>
+
+          <rect x="400" y="398" width="9" height="9" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="1.5"/>
+          <text x="416" y="407" fill="var(--ink-2)">Alt sağ · Vardiya kartları · 3×116 · sağ başparmak</text>
+
+          <rect x="400" y="416" width="9" height="9" fill="var(--accent)" opacity=".08" stroke="var(--accent)" stroke-dasharray="2 2"/>
+          <text x="416" y="425" fill="var(--accent)">Orta şerit · ZİNCİR BANDI · 180 px · dokunulmaz</text>
+
+          <line x1="40" y1="440" x2="720" y2="440" stroke="var(--rule)"/>
+          <text x="40" y="460" fill="var(--accent)" font-weight="700">Toplam arayüz kaplaması ≈ %21 — geri kalan her piksel fabrika.</text>
+          <text x="40" y="478" fill="var(--ink-3)">Tablet (4:3) ve geniş telefonlarda adalar kenara yapışık kalır; fabrika ortadan büyür.</text>
+        </g>
       </svg>
     </div>
-    <figcaption>Oyuncuya öğretilen tek okuma kalıbı: dolu yığın ile boş bandın arasındaki istasyon suçludur. Bir kez öğrenilir, her seansta kullanılır.</figcaption>
+    <figcaption>Dört istasyon soldan sağa. Dikkat: darboğazın (Boya) solundaki tampon dolu, sağındaki boş — bu okuma artık şemadan değil, ekranın kendi geometrisinden geliyor.</figcaption>
   </figure>
 
+  <h3>Ölçü tablosu</h3>
   <div class="table-scroll">
     <table>
-      <thead>
-        <tr><th>Durum</th><th>Bant</th><th>Tampon</th><th>İşçi</th><th>Ek sinyal</th></tr>
-      </thead>
+      <thead><tr><th>Ada</th><th>Konum</th><th class="num">Boyut</th><th>Rol</th></tr></thead>
       <tbody>
-        <tr>
-          <td class="key">Akışta</td>
-          <td>Düzenli aralıklı ürünler</td><td>%0–40, alçak yığın</td>
-          <td>Ritmik çalışma döngüsü</td><td>—</td>
-        </tr>
-        <tr>
-          <td class="key">Yığılma</td>
-          <td>Giriş bandı tıka basa dolu</td><td>%80+, ürünler yere taşar</td>
-          <td>Hızlı ama yetişemiyor</td><td>İstasyon çerçevesi kalınlaşır</td>
-        </tr>
-        <tr>
-          <td class="key">Aç kalma</td>
-          <td>Çıkış bandı boş</td><td>0</td>
-          <td>Bekleme animasyonu: esneme, saate bakma</td><td>—</td>
-        </tr>
-        <tr>
-          <td class="key">Arıza</td>
-          <td>Bant durur</td><td>Dondurulur</td>
-          <td>İki adım geri çekilir</td><td>Duman + kırmızı yanıp sönme + makine titremesi</td>
-        </tr>
-        <tr>
-          <td class="key">Psycho overdrive</td>
-          <td>2× hızlı akış</td><td>Hatalı ürünler farklı siluet</td>
-          <td>Mor aura, titrek duruş</td><td>Hatalılar bantta gözle ayırt edilir</td>
-        </tr>
-        <tr>
-          <td class="key">İşçisiz</td>
-          <td>Çok seyrek ürün</td><td>Yavaş dolar</td>
-          <td>Boş tezgah + soluk hayalet siluet</td><td>—</td>
-        </tr>
+        <tr><td class="key">Kaynak HUD</td><td>Üst sol</td><td class="num">210 × 44</td><td>Salt okunur — para, ürün</td></tr>
+        <tr><td class="key">Sipariş şeridi</td><td>Üst orta</td><td class="num">300 × 62</td><td>Salt okunur — ilerleme, süre, ödül</td></tr>
+        <tr><td class="key">Kasa + menü</td><td>Üst sağ</td><td class="num">140 × 44</td><td>Sayaç; dokununca kamera kasaya gider</td></tr>
+        <tr><td class="key">Navigasyon</td><td>Alt sol</td><td class="num">204 × 52</td><td>3 sekme, sol başparmak</td></tr>
+        <tr><td class="key">Vardiya kartları</td><td>Alt sağ</td><td class="num">3 × 116 × 68</td><td>Eylem; sağ başparmak</td></tr>
+        <tr><td class="key">İstasyon çekmecesi</td><td>Alttan</td><td class="num">tam en × ≤164</td><td>Açılınca vardiya kartlarını gizler</td></tr>
       </tbody>
     </table>
-  </div>
-
-  <div class="panel is-jam">
-    <p class="panel-label">Yasak</p>
-    <p>Arıza için <strong>tam ekran uyarı modalı yok.</strong> Modal, oyuncuyu sahneden koparır ve sorunu nerede olduğunu öğretmez. Arıza yalnızca makinenin kendisinde görünür; aciliyet vardiya kartı ve hafif titreşimle iletilir.</p>
   </div>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">03</span><h2>İstasyon çekmecesi</h2></div>
+  <div class="sec-head"><span class="sec-num">03</span><h2>Başparmak bölgeleri</h2></div>
 
-  <p>Bir istasyona dokununca açılan yüzey. Amacı tek: <em>bu istasyonu hızlandırmak için elimde ne var?</em></p>
+  <p>Yatayda telefon iki uçtan tutulur; başparmaklar alt köşelerden pivot yapar. Bu, dikeydeki tek başparmak yayından tamamen farklı bir haritadır ve arayüz yerleşimini o belirler.</p>
 
-  <figure class="figure fig-wide">
+  <figure class="figure">
     <div class="figure-scroll">
-      <svg viewBox="0 0 740 420" role="img" aria-label="İstasyon çekmecesi açık durumu: fabrika üstte görünür kalır, seçili istasyon vurgulanır, çekmece ekranın üçte birini kaplar.">
-        <!-- telefon -->
-        <rect x="20" y="14" width="248" height="392" rx="20" fill="var(--surface-2)" stroke="var(--rule-strong)" stroke-width="2"/>
-        <!-- karartılmış fabrika -->
-        <rect x="22" y="46" width="244" height="212" fill="var(--ground)" opacity=".55"/>
-        <path d="M144 88 L250 148 L144 208 L38 148 Z" fill="var(--surface-2)" opacity=".4" stroke="var(--wire)" stroke-dasharray="2 2"/>
-        <!-- spot ışıklı istasyon -->
-        <rect x="120" y="130" width="48" height="34" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5"/>
-        <circle cx="144" cy="147" r="30" fill="var(--accent)" opacity=".12"/>
-        <text x="144" y="182" font-family="var(--f-mono)" font-size="9" fill="var(--accent)" text-anchor="middle">seçili istasyon</text>
-        <text x="144" y="230" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)" text-anchor="middle">fabrika görünür kalır</text>
+      <svg viewBox="0 0 760 400" role="img" aria-label="Yatay başparmak erişim haritası: alt köşelerden yayılan kolay erişim yayları, orta üst bölge erişilemez.">
+        <defs>
+          <clipPath id="scr"><rect x="40" y="16" width="680" height="314" rx="22"/></clipPath>
+        </defs>
+        <rect x="40" y="16" width="680" height="314" rx="22" fill="var(--ground)" stroke="var(--rule-strong)" stroke-width="2"/>
 
-        <!-- çekmece -->
-        <rect x="22" y="258" width="244" height="130" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
-        <rect x="118" y="264" width="52" height="4" rx="2" fill="var(--wire)"/>
-        <text x="36" y="292" font-family="var(--f-display)" font-size="13" font-weight="700" fill="var(--ink)">Boya &amp; Süsleme</text>
-        <text x="252" y="292" font-family="var(--f-mono)" font-size="15" font-weight="700" fill="var(--jam)" text-anchor="end">9.0 sn</text>
-        <!-- işçi slotu -->
-        <rect x="36" y="302" width="104" height="34" fill="var(--surface-2)" stroke="var(--wire)"/>
-        <circle cx="54" cy="319" r="11" fill="var(--flow)" opacity=".5"/>
-        <text x="72" y="316" font-family="var(--f-mono)" font-size="9" fill="var(--ink)">Uni</text>
-        <rect x="72" y="322" width="52" height="5" fill="var(--surface)" stroke="var(--wire)"/>
-        <rect x="73" y="323" width="34" height="3" fill="var(--flow)"/>
-        <!-- yükseltme -->
-        <rect x="150" y="302" width="102" height="34" fill="var(--accent)" opacity=".25" stroke="var(--accent)" stroke-width="1.5"/>
-        <text x="201" y="316" font-family="var(--f-mono)" font-size="9" font-weight="700" fill="var(--accent)" text-anchor="middle">YÜKSELT · 340</text>
-        <text x="201" y="329" font-family="var(--f-mono)" font-size="9" fill="var(--flow)" text-anchor="middle">9.0 → 7.6 sn</text>
-        <text x="36" y="358" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)">Sv 3 · tampon 30</text>
-        <text x="252" y="358" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)" text-anchor="end">kapat ↓</text>
+        <g clip-path="url(#scr)">
+          <!-- zor bölge zemini -->
+          <rect x="40" y="16" width="680" height="314" fill="var(--jam)" opacity=".07"/>
+          <!-- uzanma yayları -->
+          <circle cx="120" cy="330" r="230" fill="var(--accent)" opacity=".10"/>
+          <circle cx="640" cy="330" r="230" fill="var(--accent)" opacity=".10"/>
+          <!-- kolay yaylar -->
+          <circle cx="120" cy="330" r="140" fill="var(--flow)" opacity=".18"/>
+          <circle cx="640" cy="330" r="140" fill="var(--flow)" opacity=".18"/>
+        </g>
 
-        <!-- ölçü -->
-        <line x1="270" y1="258" x2="270" y2="388" stroke="var(--accent)" stroke-width="1.5"/>
-        <text x="278" y="326" font-family="var(--f-mono)" font-size="11" fill="var(--accent)">maks %33</text>
+        <!-- zincir bandı işareti -->
+        <line x1="42" y1="128" x2="718" y2="128" stroke="var(--accent)" stroke-dasharray="4 3" opacity=".6"/>
+        <line x1="42" y1="260" x2="718" y2="260" stroke="var(--accent)" stroke-dasharray="4 3" opacity=".6"/>
+        <text x="380" y="150" font-family="var(--f-mono)" font-size="9" fill="var(--accent)" text-anchor="middle">zincir bandı — istasyon hotspot'ları burada</text>
 
-        <!-- kurallar -->
-        <g font-family="var(--f-mono)" font-size="11.5">
-          <text x="330" y="40" fill="var(--ink)" font-weight="700">ÇEKMECEDE OLACAKLAR</text>
-          <text x="330" y="62" fill="var(--flow)">✓ İstasyon adı + güncel süre (büyük)</text>
-          <text x="330" y="80" fill="var(--flow)">✓ İşçi slotu — dokun, listeyi aç, değiştir</text>
-          <text x="330" y="98" fill="var(--flow)">✓ Tek yükseltme düğmesi + fiyat</text>
-          <text x="330" y="116" fill="var(--flow)">✓ Delta önizlemesi: 9.0 → 7.6 sn</text>
-          <text x="330" y="134" fill="var(--flow)">✓ Seviye ve tampon kapasitesi (küçük)</text>
+        <!-- etiketler -->
+        <text x="120" y="286" font-family="var(--f-mono)" font-size="9.5" font-weight="700" fill="var(--flow)" text-anchor="middle">KOLAY</text>
+        <text x="640" y="286" font-family="var(--f-mono)" font-size="9.5" font-weight="700" fill="var(--flow)" text-anchor="middle">KOLAY</text>
+        <text x="380" y="316" font-family="var(--f-mono)" font-size="9" fill="var(--accent)" text-anchor="middle">uzanma</text>
+        <text x="380" y="60" font-family="var(--f-mono)" font-size="10" font-weight="700" fill="var(--jam)" text-anchor="middle">ERİŞİLEMEZ — buraya eylem koyma</text>
+        <text x="380" y="78" font-family="var(--f-mono)" font-size="8.5" fill="var(--jam)" text-anchor="middle">yalnızca salt okunur durum</text>
 
-          <text x="330" y="172" fill="var(--ink)" font-weight="700">ÇEKMECEDE OLMAYACAKLAR</text>
-          <text x="330" y="194" fill="var(--jam)">✕ Diğer istasyonların istatistikleri</text>
-          <text x="330" y="212" fill="var(--jam)">✕ Hammadde / bileşen listeleri</text>
-          <text x="330" y="230" fill="var(--jam)">✕ Sekme, alt sekme, kaydırmalı liste</text>
-          <text x="330" y="248" fill="var(--jam)">✕ Sipariş bilgisi</text>
-          <text x="330" y="266" fill="var(--jam)">✕ İkinci bir yükseltme yolu</text>
-
-          <text x="330" y="304" fill="var(--ink)" font-weight="700">GERİ BİLDİRİM ZİNCİRİ</text>
-          <text x="330" y="326" fill="var(--ink-2)">İşçi değişti →</text>
-          <text x="348" y="344" fill="var(--ink-2)">çekmecedeki sayı 9.0'dan 6.8'e sayarak iner</text>
-          <text x="348" y="362" fill="var(--ink-2)">+ aynı anda sahnede bant hızlanır</text>
-          <text x="348" y="380" fill="var(--accent)">+ tampon gözle görülür şekilde erimeye başlar</text>
+        <!-- açıklama -->
+        <g font-family="var(--f-mono)" font-size="11">
+          <line x1="40" y1="348" x2="720" y2="348" stroke="var(--rule)"/>
+          <text x="40" y="370" fill="var(--ink)" font-weight="700">KURAL: durum ile eylem aynı öğe olamaz.</text>
+          <text x="40" y="388" fill="var(--ink-2)">Sipariş tamamlandığında üstteki şerit yalnızca parlar; SEVK ET düğmesi alt sağda vardiya kartı olarak doğar.</text>
         </g>
       </svg>
     </div>
-    <figcaption>Çekmece açıkken fabrikanın görünür kalması zorunlu — yaptığın değişikliğin etkisini <em>aynı anda</em> görmezsen, panel yine sahneden kopmuş olur.</figcaption>
+    <figcaption>Dikeyde sipariş şeridine dokunup sevk etmek doğaldı. Yatayda o şerit erişilemez bölgede kalır — bu yüzden en önemli dokunuş alt sağa taşınır.</figcaption>
+  </figure>
+
+  <div class="panel is-accent">
+    <p class="panel-label">İstasyon hotspot'ları</p>
+    <p>Zincir bandı ekranın dikey ortasında olduğu için istasyonlar “uzanma” bölgesindedir — kabul edilebilir, çünkü istasyona dokunmak <em>keşif</em> hareketidir, refleks değil. Ama zincir bandı asla ekranın üst üçte birine yerleştirilmemeli; orada dokunulamaz hale gelir.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>Darboğaz görsel dili</h2></div>
+
+  <p>Bu bölümün mantığı yönelimle değişmez; okunuşu kolaylaşır. Oyuncu fabrikaya baktığında <strong>tek kelime okumadan</strong> ne olduğunu anlamalı ve öğrendiği kalıp tektir:</p>
+
+  <div class="panel is-jam">
+    <p style="font-size:17px; margin:0"><strong>Dolu yığın ile boş bandın arasındaki istasyon suçludur.</strong> Yatayda bu, ekranda soldan sağa okunan tek bir cümledir.</p>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Durum</th><th>Bant</th><th>Tampon</th><th>İşçi</th><th>Ek sinyal</th></tr></thead>
+      <tbody>
+        <tr><td class="key">Akışta</td><td>Düzenli aralıklı ürünler</td><td>%0–40, alçak yığın</td><td>Ritmik çalışma döngüsü</td><td>—</td></tr>
+        <tr><td class="key">Yığılma</td><td>Sol taraf tıka basa dolu</td><td>%80+, ürünler yere taşar</td><td>Hızlı ama yetişemiyor</td><td>İstasyon çerçevesi kalınlaşır</td></tr>
+        <tr><td class="key">Aç kalma</td><td>Sağ taraf boş</td><td>0</td><td>Bekleme: esneme, saate bakma</td><td>—</td></tr>
+        <tr><td class="key">Arıza</td><td>Bant durur</td><td>Dondurulur</td><td>İki adım geri çekilir</td><td>Duman + kırmızı yanıp sönme + titreme</td></tr>
+        <tr><td class="key">Psycho overdrive</td><td>2× hızlı akış</td><td>Hatalı ürünler farklı siluet</td><td>Mor aura, titrek duruş</td><td>Hatalılar bantta ayırt edilir</td></tr>
+        <tr><td class="key">İşçisiz</td><td>Çok seyrek ürün</td><td>Yavaş dolar</td><td>Boş tezgah + soluk hayalet</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Hiçbir durum yalnızca renkle anlatılmaz; her birinin ikinci kanalı vardır — yoğunluk, hareket, duruş veya duman. <strong>Arıza için tam ekran modal yoktur:</strong> modal oyuncuyu sahneden koparır ve sorunun nerede olduğunu öğretmez. Arıza yalnızca makinenin kendisinde görünür; aciliyet vardiya kartı ve hafif titreşimle iletilir.</p>
+
+  <h3>Yatayın getirdiği ek imkân</h3>
+  <p>Genişlik arttığı için tamponlar artık <strong>gerçek fiziksel yığın</strong> olarak çizilebilir — dikeyde 7 px'lik kutucuklara sıkışıyorlardı. Yığın yüksekliği doluluk oranını doğrudan gösterir; taşma anında ürünler zemine düşer ve orada kalır. Oyuncu tampon yüzdesini hiç okumadan bilir.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2>İstasyon çekmecesi</h2></div>
+
+  <p>Yataydaki en büyük yapısal kazanç burada. Dikeyde çekmece <code>430 × 307</code> dikdörtgendi ve içerik dikey istiflenmek zorundaydı. Yatayda <code>932 × 164</code> olur — <strong>geniş ve alçak</strong>. Her şey tek satıra dizilir, kaydırma gerekmez.</p>
+
+  <figure class="figure">
+    <div class="figure-scroll">
+      <svg viewBox="0 0 760 360" role="img" aria-label="İstasyon çekmecesi yatayda alt kontrol çubuğu olarak açılır: üç yatay bölge — kimlik, işçi, yükseltme.">
+        <rect x="40" y="16" width="680" height="314" rx="22" fill="var(--ground)" stroke="var(--rule-strong)" stroke-width="2"/>
+
+        <!-- fabrika üstte, karartılmış -->
+        <rect x="42" y="18" width="676" height="196" fill="var(--surface-2)" opacity=".45"/>
+        <line x1="128" y1="150" x2="628" y2="150" stroke="var(--wire)" stroke-width="3" opacity=".5"/>
+        <rect x="112" y="126" width="52" height="30" fill="var(--surface)" stroke="var(--wire)" opacity=".45"/>
+        <rect x="252" y="126" width="52" height="30" fill="var(--surface)" stroke="var(--wire)" opacity=".45"/>
+        <!-- spot ışıklı istasyon -->
+        <circle cx="420" cy="140" r="34" fill="var(--accent)" opacity=".14"/>
+        <rect x="392" y="124" width="56" height="34" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5"/>
+        <rect x="532" y="126" width="52" height="30" fill="var(--surface)" stroke="var(--wire)" opacity=".45"/>
+        <text x="420" y="184" font-family="var(--f-mono)" font-size="8.5" fill="var(--accent)" text-anchor="middle">seçili istasyon — zincir bandı açık kalır</text>
+
+        <!-- çekmece: alt kontrol çubuğu -->
+        <rect x="42" y="214" width="676" height="100" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+        <rect x="360" y="219" width="40" height="4" rx="2" fill="var(--wire)"/>
+
+        <!-- bölge 1: kimlik -->
+        <text x="66" y="252" font-family="var(--f-display)" font-size="14" font-weight="700" fill="var(--ink)">Boya &amp; Süsleme</text>
+        <text x="66" y="280" font-family="var(--f-mono)" font-size="20" font-weight="700" fill="var(--jam)">9.0 sn</text>
+        <text x="66" y="298" font-family="var(--f-mono)" font-size="8.5" fill="var(--ink-3)">Sv 3 · tampon 30</text>
+        <line x1="224" y1="234" x2="224" y2="298" stroke="var(--rule)"/>
+
+        <!-- bölge 2: işçi şeridi -->
+        <text x="246" y="244" font-family="var(--f-mono)" font-size="8.5" letter-spacing="1.2" fill="var(--ink-3)">İŞÇİ</text>
+        <rect x="246" y="252" width="70" height="46" fill="var(--flow-soft)" stroke="var(--flow)" stroke-width="1.5"/>
+        <circle cx="264" cy="270" r="9" fill="var(--flow)" opacity=".55"/>
+        <text x="280" y="268" font-family="var(--f-mono)" font-size="8" fill="var(--ink)">Uni</text>
+        <rect x="278" y="274" width="30" height="4" fill="var(--surface)" stroke="var(--flow)"/>
+        <rect x="279" y="275" width="20" height="2" fill="var(--flow)"/>
+        <text x="252" y="292" font-family="var(--f-mono)" font-size="7" fill="var(--flow)">×1.35 · 6.8 sn</text>
+
+        <rect x="322" y="252" width="70" height="46" fill="var(--surface-2)" stroke="var(--wire)"/>
+        <circle cx="340" cy="270" r="9" fill="var(--ink-3)" opacity=".4"/>
+        <text x="356" y="268" font-family="var(--f-mono)" font-size="8" fill="var(--ink-2)">Pofu</text>
+        <text x="328" y="292" font-family="var(--f-mono)" font-size="7" fill="var(--ink-3)">8.1 sn</text>
+
+        <rect x="398" y="252" width="70" height="46" fill="var(--surface-2)" stroke="var(--wire)"/>
+        <circle cx="416" cy="270" r="9" fill="var(--ink-3)" opacity=".4"/>
+        <text x="432" y="268" font-family="var(--f-mono)" font-size="8" fill="var(--ink-2)">Vako</text>
+        <text x="404" y="292" font-family="var(--f-mono)" font-size="7" fill="var(--ink-3)">9.4 sn</text>
+
+        <text x="480" y="278" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)">→</text>
+        <line x1="502" y1="234" x2="502" y2="298" stroke="var(--rule)"/>
+
+        <!-- bölge 3: yükseltme -->
+        <rect x="524" y="244" width="172" height="54" fill="var(--accent)" opacity=".25" stroke="var(--accent)" stroke-width="2"/>
+        <text x="610" y="266" font-family="var(--f-mono)" font-size="11" font-weight="700" fill="var(--accent)" text-anchor="middle">YÜKSELT · 340 🪙</text>
+        <text x="610" y="284" font-family="var(--f-mono)" font-size="11" font-weight="700" fill="var(--flow)" text-anchor="middle">9.0 → 7.6 sn</text>
+
+        <!-- ölçü -->
+        <line x1="726" y1="214" x2="726" y2="314" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="734" y="268" font-family="var(--f-mono)" font-size="9" fill="var(--accent)" transform="rotate(90 734 268)" text-anchor="middle">164 px · %38</text>
+
+        <!-- bölge etiketleri -->
+        <g font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)">
+          <text x="66" y="232">① KİMLİK</text>
+          <text x="246" y="232" opacity="0">.</text>
+          <text x="524" y="232">③ TEK YÜKSELTME</text>
+        </g>
+        <text x="246" y="232" font-family="var(--f-mono)" font-size="9" fill="var(--ink-3)">② İŞÇİ — liste yok, şerit</text>
+      </svg>
+    </div>
+    <figcaption>İşçi seçimi ayrı bir ekran ya da açılır liste değil: çekmecenin ortasında yatay şerit. Her kart o istasyondaki tahmini süreyi gösterir, yatkın tür <code>×1.35</code> rozetiyle başa geçer. Dikeyde bu şerit için yer yoktu; yatayda bedava geliyor.</figcaption>
   </figure>
 
   <div class="grid-2">
     <div class="panel is-flow">
-      <p class="panel-label">İşçi değiştirme</p>
-      <p>Slot'a dokununca yeni ekran değil, çekmecenin içinde <strong>yatay Luupie şeridi</strong> açılır. Her kart: yüz, isim, sevgi barı, bu istasyondaki tahmini süre. Yatkın türler önce sıralanır ve <code>×1.35</code> rozeti taşır. Dokun → anında atanır, şerit kapanır, çekmece açık kalır.</p>
+      <p class="panel-label">Çekmecede olacaklar</p>
+      <ul>
+        <li>İstasyon adı + güncel süre (büyük, sol blok)</li>
+        <li>İşçi şeridi — dokun, anında ata, şerit kapanmaz</li>
+        <li>Tek yükseltme düğmesi + fiyat (sağ blok)</li>
+        <li>Delta önizlemesi: <code>9.0 → 7.6 sn</code></li>
+        <li>Seviye ve tampon kapasitesi (küçük)</li>
+      </ul>
     </div>
-    <div class="panel is-accent">
-      <p class="panel-label">Delta kuralı</p>
-      <p>Her yükseltme düğmesi <strong>sonucu satın almadan önce</strong> gösterir: <code>9.0 → 7.6 sn</code>. Oyuncu parayı harcamadan getiriyi bilir. Bu, “şimdi neyi geliştirmeliyim?” kararını tahminden hesaba çevirir — idle oyunun tek gerçek kararı budur.</p>
+    <div class="panel is-jam">
+      <p class="panel-label">Çekmecede olmayacaklar</p>
+      <ul>
+        <li>Diğer istasyonların istatistikleri</li>
+        <li>Hammadde / bileşen listeleri</li>
+        <li>Sekme, alt sekme, dikey kaydırma</li>
+        <li>Sipariş bilgisi</li>
+        <li>İkinci bir yükseltme yolu</li>
+      </ul>
     </div>
   </div>
+
+  <div class="panel is-accent">
+    <p class="panel-label">Geri bildirim zinciri</p>
+    <p>İşçi değişti → çekmecedeki sayı <code>9.0</code>'dan <code>6.8</code>'e sayarak iner <strong>+</strong> aynı anda sahnede bant hızlanır <strong>+</strong> tampon gözle görülür şekilde erimeye başlar. Çekmece <code>164 px</code> ile sınırlı olduğu için zincir bandı hep açık kalır — etkiyi <em>aynı anda</em> görürsünüz. Dikeyde çekmece sahnenin üçte birini yiyordu; burada yemiyor.</p>
+  </div>
+
+  <p>Kamera davranışı: çekmece açılırken sahne ölçeklenmez, yalnızca <code>~40 px</code> yukarı kayar. Ölçekleme izometrik sahnede titreme yaratır; kaydırma yaratmaz.</p>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">04</span><h2>Sipariş şeridi</h2></div>
+  <div class="sec-head"><span class="sec-num">06</span><h2>Sipariş şeridi ve sevkiyat</h2></div>
 
-  <p>Fabrikanın hemen üstünde, her zaman görünür. Oyuncunun “şu an ne için üretiyorum?” sorusu asla cevapsız kalmaz.</p>
+  <p>Şerit üst ortada, salt okunur. İçeriği dikey plandakiyle aynı — müşteri, ürün × adet, ilerleme, tahmini süre, ödül — ama <strong>eylem taşınır</strong>.</p>
 
-  <div class="table-scroll">
-    <table>
-      <thead><tr><th>Bileşen</th><th>İçerik</th><th>Davranış</th></tr></thead>
-      <tbody>
-        <tr><td class="key">Müşteri</td><td>Yüz + isim</td><td>Hikâye siparişlerinde tanıdık karakter döner</td></tr>
-        <tr><td class="key">Ürün</td><td>Model ikonu × adet</td><td>Üretilen model hattakinden farklıysa uyarı rozeti</td></tr>
-        <tr><td class="key">İlerleme</td><td><code>14/20</code> + bar</td><td>Her sevkiyata hazır ürün geldiğinde tık sesiyle artar</td></tr>
-        <tr><td class="key">Süre</td><td><code>~12 dk</code></td><td>Mevcut hat hızından hesaplanır; darboğaz değişince canlı güncellenir</td></tr>
-        <tr><td class="key">Ödül</td><td>Para + ikincil</td><td>Şeridin sağ ucunda sabit çip</td></tr>
-      </tbody>
-    </table>
+  <div class="swap">
+    <div class="swap-cell old">
+      <span class="t">Dikeyde</span>
+      Sipariş tamamlanınca şeridin kendisi <em>SEVK ET</em> düğmesine dönüşürdü; şerit başparmak menzilindeydi.
+    </div>
+    <div class="swap-arrow">→</div>
+    <div class="swap-cell new">
+      <span class="t">Yatayda</span>
+      Şerit yalnızca <strong>parlar ve nabız atar</strong>. <em>SEVK ET</em> alt sağda 1. öncelikli vardiya kartı olarak doğar — başparmağın altında.
+    </div>
   </div>
 
-  <p><strong>Tamamlandığında şerit dönüşür.</strong> Tüm bant genişliğinde tek bir <em>SEVK ET</em> düğmesi olur, yeşile döner ve hafifçe nabız atar. Oyundaki en önemli dokunuş budur — çünkü ekonominin tek satış noktası burasıdır.</p>
-
-  <p>Şeride dokunmak sipariş çekmecesini açar (aynı %33 kuralı): aktif sipariş, sıradaki sipariş, ve varsa değiştirme seçeneği. Oyuncu aynı anda <strong>bir aktif + bir sıradaki</strong> sipariş yönetir; üçüncüsü yoktur.</p>
+  <p>Bu ayrım keyfi değil: yatayda üst-orta erişilemez bölgedir. Oyunun en önemli dokunuşunu oraya koymak, her sevkiyatta kullanıcıyı tutuşunu değiştirmeye zorlar.</p>
 
   <div class="table-scroll">
     <table>
       <thead><tr><th>Sınıf</th><th class="num">Süre</th><th>Rolü</th></tr></thead>
       <tbody>
-        <tr><td class="key">Hızlı sipariş</td><td class="num">5–10 dk</td><td>Seans içinde kapanır; “şimdi gitme” sebebi</td></tr>
-        <tr><td class="key">Standart sipariş</td><td class="num">30–90 dk</td><td>Gün içinde geri dönme sebebi</td></tr>
-        <tr><td class="key">Hikâye siparişi</td><td class="num">6–24 sa</td><td>Ertesi gün geri dönme sebebi + bölge ilerlemesi</td></tr>
+        <tr><td class="key">Hızlı sipariş</td><td class="num">10–20 dk</td><td>Oturum içinde kapanır (yatay için yeniden dengelendi)</td></tr>
+        <tr><td class="key">Standart sipariş</td><td class="num">60–120 dk</td><td>Aynı gün ikinci oturum sebebi</td></tr>
+        <tr><td class="key">Hikâye siparişi</td><td class="num">8–24 sa</td><td>Ertesi gün dönüş + bölge ilerlemesi</td></tr>
       </tbody>
     </table>
   </div>
+
+  <p>Oyuncu aynı anda <strong>bir aktif + bir sıradaki</strong> sipariş yönetir; üçüncüsü yoktur. Şeride dokunmak sipariş çekmecesini açar — istasyon çekmecesiyle aynı <code>164 px</code> kuralına tabidir.</p>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">05</span><h2>Vardiya kartları</h2></div>
+  <div class="sec-head"><span class="sec-num">07</span><h2>Vardiya kartları ve navigasyon</h2></div>
 
-  <p>Ekranın %12'si, en fazla <strong>üç kart</strong>. Görevi: “şimdi ne yapmalıyım?” sorusuna sıralı cevap vermek. Her kart bir ikon, tek satır metin ve tek eylem düğmesi taşır.</p>
+  <p>Alt sağda en fazla üç kart, her biri <code>116 × 68</code>. Yatayda bunlar bant olmaktan çıkıp <strong>yüzen çip</strong> olur — kart yoksa hiçbir alan boşa gitmez, çünkü zaten sahnenin üstünde duruyorlardı.</p>
 
   <div class="table-scroll">
     <table>
       <thead><tr><th class="num">Öncelik</th><th>Tetikleyici</th><th>Kart metni</th><th>Eylem</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td>Arıza / tıkanma</td><td>“Boya tıkandı — 2 dk'dır duruyor”</td><td>Tamir mini oyununu aç</td></tr>
-        <tr><td class="num">2</td><td>Sipariş hazır</td><td>“20 Peluş Tavşan hazır”</td><td>Sevk et</td></tr>
+        <tr><td class="num">1</td><td>Sipariş hazır</td><td>“20 Peluş Tavşan hazır”</td><td>Sevk et</td></tr>
+        <tr><td class="num">2</td><td>Arıza / tıkanma</td><td>“Boya tıkandı — 2 dk”</td><td>Tamir olayını aç</td></tr>
         <tr><td class="num">3</td><td>Toplanmamış kasa</td><td>“3 kasa bekliyor”</td><td>Kamerayı kasaya götür</td></tr>
         <tr><td class="num">4</td><td>İşçisiz istasyon</td><td>“Paketleme'de kimse yok”</td><td>İşçi şeridini aç</td></tr>
         <tr><td class="num">5</td><td>Yükseltme karşılanabilir</td><td>“Darboğazı 340 ile hızlandır”</td><td>İstasyon çekmecesini aç</td></tr>
@@ -579,104 +651,93 @@
     </table>
   </div>
 
-  <div class="panel is-flow">
-    <p class="panel-label">Boş durum ödülü</p>
-    <p>Hiç kart yoksa bant <strong>tamamen kapanır</strong> ve o 104 px fabrikaya eklenir. Temiz bir fabrikanın ödülü, fabrikayı daha büyük görmektir. Bu, “yapacak iş yok” durumunu boş bir kutuyla değil, alan kazancıyla anlatır.</p>
-  </div>
-</section>
+  <p>Sıralama dikey plandan bir kademe değişti: <strong>sevkiyat 1. sıraya çıktı</strong>, çünkü artık şerit üzerinden yapılamıyor ve tek satış noktası o.</p>
 
-<section>
-  <div class="sec-head"><span class="sec-num">06</span><h2>Dönüş deneyimi</h2></div>
-
-  <p>Offline kazanç popup değil, <strong>sahnedeki fiziksel nesne</strong>. Oyun açıldığında kamyon yükleme rampasına yanaşır, kasalar iner.</p>
+  <h3>Navigasyon</h3>
+  <p>Alt solda üç sekme, yatay dizilim, <code>204 × 52</code>. Yatayda alt kenar boyunca uzanan tam genişlikte tab bar <strong>kullanılmaz</strong> — 430 px'lik dikey alanda 84 px'i sekmelere vermek savurganlıktır ve sağ başparmağın eylem bölgesini işgal eder.</p>
 
   <ol class="rule-list">
-    <li><strong>Kamyon gelir</strong> (1,5 sn). Oyuncu hiçbir şeye dokunmadan fabrikayı görür.</li>
-    <li><strong>Kasalar rampada yığılır.</strong> Kasa sayısı ≈ offline süresi; üç kasadan fazlaysa yığın büyür ama sayı üçte kalır.</li>
-    <li><strong>Dokununca patlar</strong> — para ve ürün ikonları HUD'a uçar. Her kasa ayrı dokunuş; toplam üç dokunuş.</li>
-    <li><strong>Vardiya raporu kart olur.</strong> “Boya 2 sa 10 dk tıkalı kaldı” bilgisi modal değil, vardiya bandındaki bir karttır — ve kartın eylemi doğrudan o istasyonu açar.</li>
+    <li><strong>Fabrika</strong> — üretim, siparişler, müdahaleler, çevrimdışı kazanç. Açılış sekmesi her zaman budur; aktif zamanın %60–70'i burada geçer.</li>
+    <li><strong>Şehir</strong> — bölge haritası ve restorasyon projeleri. Fabrikanın sonucu.</li>
+    <li><strong>Luupies</strong> — sahiplenme, koleksiyon, kozmetik, karakter ilişkileri.</li>
   </ol>
-
-  <div class="panel is-jam">
-    <p class="panel-label">Neden popup değil</p>
-    <p>Popup, oyuncunun gördüğü ilk şeyi bir <em>rapor</em> yapar. Kasa ise ilk şeyi <em>fabrika</em> yapar. Aradaki fark, oyunun “tablo yöneticisi” mi yoksa “fabrika sahibi” mi hissettirdiğidir. Ayrıca kasa toplamak, hiçbir şey okumadan tatmin verir.</p>
-  </div>
-</section>
-
-<section>
-  <div class="sec-head"><span class="sec-num">07</span><h2>Navigasyon ve taşınma haritası</h2></div>
-
-  <p>Beş eşit sekme, beş eşit öncelik demektir — oyuncuya hangisinin ana oyun olduğunu söylemez. Üçe iniyor:</p>
-
-  <div class="grid-2">
-    <div class="panel is-accent">
-      <p class="panel-label">Sekme 1 · Fabrika</p>
-      <p>Üretim, siparişler, müdahaleler, çevrimdışı kazanç. <strong>Oyuncunun aktif zamanının %60–70'i burada geçmeli.</strong> Açılış sekmesi her zaman budur.</p>
-    </div>
-    <div class="panel">
-      <p class="panel-label">Sekme 2 · Şehir</p>
-      <p>Bölge haritası ve restorasyon projeleri. Fabrikanın <em>sonucu</em> — üretim buraya yatırılır.</p>
-    </div>
-    <div class="panel">
-      <p class="panel-label">Sekme 3 · Luupies</p>
-      <p>Sahiplenme, koleksiyon, kozmetik, karakter ilişkileri. Duygusal bağ katmanı.</p>
-    </div>
-  </div>
 
   <div class="table-scroll">
     <table>
       <thead><tr><th>Eski yer</th><th>Yeni yer</th><th>Gerekçe</th></tr></thead>
       <tbody>
-        <tr><td class="key">Orders sekmesi</td><td>Fabrikadaki sipariş şeridi + çekmecesi</td><td>Sipariş üretimin hedefi; ayrı ekranda bakılan bir liste değil</td></tr>
-        <tr><td class="key">Games / Arcade</td><td>Sahnedeki bağlamsal olaylar</td><td>Katalogdan açılan mini oyun ayrı üründür; olaydan doğan mini oyun oynanıştır</td></tr>
-        <tr><td class="key">Daily / Weekly</td><td>HUD'daki küçük görev ikonu → yan panel</td><td>Yön gösterici yan hedef; ana navigasyon ağırlığını hak etmiyor</td></tr>
-        <tr><td class="key">Workshop</td><td>Fabrika içinde destek tezgahı</td><td>İkinci bir üretim oyunu olmaktan çıkıp ana hattı besleyen tek işleve iner</td></tr>
-        <tr><td class="key">Map</td><td>Şehir sekmesi</td><td>İsim değişikliği değil, rol değişikliği: harita artık üretimin sonucu</td></tr>
+        <tr><td class="key">Orders sekmesi</td><td>Üst şerit + sipariş çekmecesi</td><td>Sipariş üretimin hedefi; ayrı ekranda bakılan liste değil</td></tr>
+        <tr><td class="key">Games / Arcade</td><td>Sahnedeki bağlamsal olaylar</td><td>Katalogdan açılan mini oyun ayrı üründür</td></tr>
+        <tr><td class="key">Daily / Weekly</td><td>Üst sağ menü → yan panel</td><td>Yön gösterici yan hedef</td></tr>
+        <tr><td class="key">Workshop</td><td>Fabrika içinde destek tezgahı</td><td>İkinci üretim oyunu olmaktan çıkar</td></tr>
+        <tr><td class="key">Map</td><td>Şehir sekmesi</td><td>Harita artık üretimin sonucu</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="panel is-jam">
     <p class="panel-label">Hammadde sadeleştirmesi</p>
-    <p>Kumaş, dişli, iplik, düğme, stuffing ve charm ayrı ayrı takip edilmemeli. Çekirdek döngü dokümanı bunu bilerek dışarıda bırakmıştı; geri gelmesi ana hattın yanına ikinci bir üretim oyunu kurmuş. <strong>Tek ara kaynak yeterli:</strong> Workshop yalnızca <em>bileşen</em> üretir, o da yalnızca üst model oyuncaklar için gerekir. Altı kaynak → bir kaynak.</p>
+    <p>Kumaş, dişli, iplik, düğme, stuffing ve charm ayrı ayrı takip edilmemeli. <strong>Tek ara kaynak yeterli:</strong> Workshop yalnızca <em>bileşen</em> üretir, o da yalnızca üst model oyuncaklar için gerekir. Altı kaynak → bir kaynak. Yatay ekranda HUD'a altı sayaç sığdırmak zaten mümkün değil — bu sadeleştirme artık teknik bir zorunluluk.</p>
   </div>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">08</span><h2>Mini oyunların giriş–çıkış koreografisi</h2></div>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Dönüş deneyimi</h2></div>
 
-  <p>Mini oyun artık bir menü öğesi değil, sahnedeki bir sorunun çözümü. Bu, üç kurala indirgenir:</p>
+  <p>Offline kazanç popup değil, sahnedeki fiziksel nesne. Yatayda kamyon <strong>sağdan girer</strong> ve sağ alttaki yükleme rampasına yanaşır — yani doğrudan sağ başparmağın menziline.</p>
+
+  <ol class="rule-list">
+    <li><strong>Kamyon gelir</strong> (1,5 sn). Oyuncu hiçbir şeye dokunmadan fabrikayı görür.</li>
+    <li><strong>Kasalar rampada yığılır.</strong> Sayı ≈ offline süresi; üçten fazlaysa yığın büyür ama sayı üçte kalır.</li>
+    <li><strong>Dokununca patlar</strong> — para ve ürün ikonları üst soldaki HUD'a uçar. Uçuş yolu ekranın boş köşegeninden geçer, zincir bandını kesmez.</li>
+    <li><strong>Vardiya raporu kart olur.</strong> “Boya 2 sa 10 dk tıkalı kaldı” modal değil, alt sağdaki bir karttır — ve kartın eylemi doğrudan o istasyonu açar.</li>
+  </ol>
+
+  <div class="panel is-jam">
+    <p class="panel-label">Neden popup değil</p>
+    <p>Popup, oyuncunun gördüğü ilk şeyi bir <em>rapor</em> yapar. Kasa ise ilk şeyi <em>fabrika</em> yapar. Aradaki fark, oyunun “tablo yöneticisi” mi yoksa “fabrika sahibi” mi hissettirdiğidir.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">09</span><h2>Mini oyun yüzeyleri</h2></div>
+
+  <p>Üç kural yönelimden bağımsız:</p>
 
   <ol class="rule-list">
     <li><strong>Giriş her zaman sahneden.</strong> Tıkanan makine, psycho işçi, düşen ürün, sipariş kasası. Listeden asla.</li>
-    <li><strong>Geçiş konumu öğretir.</strong> Kamera önce o noktaya yaklaşır, sonra mini oyun yüzeyi yükselir. Oyuncu <em>nerede</em> olduğunu bilir.</li>
-    <li><strong>Çıkışta değişim görünür.</strong> Aynı kameraya dönülür ve düzelttiğin şey <strong>1 saniye içinde</strong> gözle görülür: bant yeniden başlar, hatalılar kaybolur, işçiler sevinir.</li>
+    <li><strong>Geçiş konumu öğretir.</strong> Kamera önce o noktaya yaklaşır, sonra mini oyun yüzeyi yükselir.</li>
+    <li><strong>Çıkışta değişim görünür.</strong> Aynı kameraya dönülür ve düzelttiğin şey <strong>1 saniye içinde</strong> gözle görülür.</li>
   </ol>
+
+  <p>Yataya taşınırken yüzeylerin kendisi yeniden oranlanmalı. Swipe yönleri korunur ama yerleşim değişir:</p>
 
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Olay</th><th>Mekanik</th><th>Fabrika sonucu</th><th class="num">Süre</th></tr></thead>
+      <thead><tr><th>Olay</th><th>Yatay uyarlaması</th><th>Fabrika sonucu</th><th class="num">Süre</th></tr></thead>
       <tbody>
-        <tr><td class="key">Perfect Seam</td><td>Çizgi izleme / hassasiyet</td><td>Hatalı ürünleri temizler</td><td class="num">20–30 sn</td></tr>
-        <tr><td class="key">Dance-Off</td><td>Yönlü ritim swipe</td><td>Tüm işçilere süreli moral ve hız</td><td class="num">30–40 sn</td></tr>
-        <tr><td class="key">Conveyor Run</td><td>Şerit değiştirme / refleks</td><td>Düşmek üzere olan ürünleri kurtarır</td><td class="num">15–25 sn</td></tr>
-        <tr><td class="key">Cargo Sort</td><td>Sürükle-bırak sınıflandırma</td><td>Acil siparişi bonusla yollar</td><td class="num">25–35 sn</td></tr>
-        <tr><td class="key">Pressure Chamber</td><td>Basılı tut–bırak risk kontrolü</td><td>Psycho işçiyi overdrive'a sokar</td><td class="num">20–30 sn</td></tr>
-        <tr><td class="key">Memory Loom</td><td>Desen / hafıza</td><td>Blueprint veya hikâye parçası açar</td><td class="num">30–40 sn</td></tr>
+        <tr><td class="key">Perfect Seam</td><td>Dikiş hattı yatay uzar — daha uzun, daha hassas çizgi</td><td>Hatalı ürünleri temizler</td><td class="num">20–30 sn</td></tr>
+        <tr><td class="key">Dance-Off</td><td>İşçiler yan yana dizilir; ritim şeridi ekranın altında</td><td>Tüm işçilere süreli moral ve hız</td><td class="num">30–40 sn</td></tr>
+        <tr><td class="key">Conveyor Run</td><td>Şeritler yatay akar — asıl kazanan yönelim bu</td><td>Düşen ürünleri kurtarır</td><td class="num">15–25 sn</td></tr>
+        <tr><td class="key">Cargo Sort</td><td>Kasalar solda, hedefler sağda; sürükleme yatay</td><td>Acil siparişi bonusla yollar</td><td class="num">25–35 sn</td></tr>
+        <tr><td class="key">Pressure Chamber</td><td>Basınç göstergesi yatay bar; tut–bırak</td><td>Psycho işçiyi overdrive'a sokar</td><td class="num">20–30 sn</td></tr>
+        <tr><td class="key">Memory Loom</td><td>Desen ızgarası 4×3 olur (dikeyde 3×4 idi)</td><td>Blueprint veya hikâye parçası açar</td><td class="num">30–40 sn</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="panel is-accent">
-    <p class="panel-label">Ödül kuralı</p>
-    <p>Hiçbir mini oyun <strong>yalnızca</strong> coin ve XP vermez. Önce ekranda gördüğümüz somut bir problemi çözer, ödül ondan sonra gelir. Başarısızlık hiçbir zaman kaynak yakmaz — sadece fırsatı kaçırır ve istasyonu kısa süre kilitler.</p>
+    <p class="panel-label">Dört yönlü swipe uyarısı</p>
+    <p>Yukarı/aşağı swipe için <code>430 px</code>'de yalnızca ~180 px hareket payı kalır; sol/sağ için ~800 px. Bu asimetri dört yönlü mekanikleri bozar — <strong>dikey swipe eşiği yatayınkinin yarısı olmalı</strong> (örn. 40 px'e karşı 80 px), yoksa oyuncu yukarı kaydırmayı sürekli ıskalar.</p>
   </div>
+
+  <p>Ödül kuralı değişmez: hiçbir mini oyun <strong>yalnızca</strong> coin ve XP vermez. Önce ekranda gördüğümüz somut bir problemi çözer, ödül ondan sonra gelir. Başarısızlık kaynak yakmaz — fırsatı kaçırır ve istasyonu kısa süre kilitler.</p>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">09</span><h2>Ekonominin yeni rolleri</h2></div>
+  <div class="sec-head"><span class="sec-num">10</span><h2>Ekonominin rolleri</h2></div>
 
-  <p>Şu anki en büyük yapısal hata: hat üretirken para kazandırıyor, sipariş teslimi de para veriyor. İki satış noktası, oyuncunun siparişi önemsemesini engelliyor.</p>
+  <p>Yapısal hata aynen duruyor: hat üretirken para kazandırıyor, sipariş teslimi de para veriyor. İki satış noktası, oyuncunun siparişi önemsemesini engelliyor.</p>
 
   <div class="table-scroll">
     <table>
@@ -694,61 +755,90 @@
     </table>
   </div>
 
-  <p>Bu değişikliğin UI'daki karşılığı: <strong>hattan çıkan ürün HUD'da para değil, ürün sayacını artırır.</strong> Para yalnızca <em>SEVK ET</em> anında, gözle görülür bir akışla HUD'a girer. Böylece oyuncu iki şeyi aynı anda öğrenir: üretim yetmez, satmak gerekir.</p>
+  <p>UI'daki karşılığı: hattan çıkan ürün HUD'da para değil, <strong>ürün sayacını</strong> artırır. Para yalnızca sevkiyat anında, sağ alttan sol üste uçan gözle görülür bir akışla HUD'a girer. Oyuncu iki şeyi aynı anda öğrenir: üretim yetmez, satmak gerekir.</p>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">10</span><h2>İlk 10 dakika</h2></div>
+  <div class="sec-head"><span class="sec-num">11</span><h2>Seans modeli</h2></div>
 
-  <p>Her adımda ne <em>gösterildiği</em> kadar ne <strong>gizlendiği</strong> de tasarımın parçası.</p>
+  <p>Yönelim değişikliğinin en az konuşulan ama en ağır sonucu bu. Kimse 40 saniyelik bir bakış için telefonu yatay çevirmez.</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Varsayım</th><th>Dikey model</th><th>Yatay model</th></tr></thead>
+      <tbody>
+        <tr><td class="key">Günlük oturum</td><td>5–6 kısa bakış</td><td>2–3 gerçek oturum</td></tr>
+        <tr><td class="key">Oturum süresi</td><td>40 sn – 5 dk</td><td>4–12 dk</td></tr>
+        <tr><td class="key">Oturum başına karar</td><td>1–2</td><td>4–6</td></tr>
+        <tr><td class="key">Hızlı sipariş süresi</td><td>5–10 dk</td><td>10–20 dk</td></tr>
+        <tr><td class="key">Offline tavan</td><td>4 saat</td><td>6–8 saat</td></tr>
+        <tr><td class="key">Dönüş kancası</td><td>Dolan kova merakı</td><td>Biten hikâye siparişi</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Uzayan offline tavan zorunlu: oturumlar seyrekleştiği için 4 saatlik tavan oyuncunun kazancını sürekli kırpar ve “geç kaldım” hissi yaratır. <strong>6–8 saat</strong>, günde iki oturuma denk düşer.</p>
+
+  <p>Buna karşılık oturum başına <em>daha çok karar</em> sunulmalı — oyuncu oturduğunda yapacak işi olmalı. Vardiya kartlarının üç yerine <strong>oturum başında beşe kadar çıkabilmesi</strong>, ilk üçü çözüldükçe kalanların akması bunu sağlar.</p>
+
+  <div class="panel is-accent">
+    <p class="panel-label">Tavsiye</p>
+    <p>Yalnız yatay yapın. İki yönelimi birden desteklemek arayüzü iki kez tasarlamak, iki kez test etmek ve her ikisini de vasat yapmak demektir. Yatayın doğal uzantısı tablettir — <code>4:3</code>'te adalar kenarda kalır, fabrika ortadan büyür, hiçbir şey yeniden konumlanmaz.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">12</span><h2>İlk 10 dakika</h2></div>
+
+  <p>Beat'ler korunur; iki yerde yatayı öğreten değişiklik var.</p>
 
   <div class="panel">
     <div class="beat">
       <div class="beat-time">0:00–0:30</div>
-      <div class="beat-body"><b>Bant hareket eder</b>
-        <span>Oyuncu ilk oyuncağı doğrudan sahneden toplar. Hiç metin yok.</span>
+      <div class="beat-body"><b>Bant soldan sağa akar</b>
+        <span>Kamera hattı bir uçtan diğerine yavaşça tarar, sonra tamamını gösterecek yerde durur. Oyuncu ilk oyuncağı <strong>alt-orta</strong> bölgeden toplar — erişilebilir yer. Hiç metin yok.</span>
         <span class="hide">gizli: nav, vardiya kartları, sipariş şeridi</span>
       </div>
     </div>
     <div class="beat">
       <div class="beat-time">0:30–1:30</div>
       <div class="beat-body"><b>Boya istasyonu yavaşlar</b>
-        <span>Tampon dolar, sonraki bant boşalır. Darboğazın iki imzası ilk kez birlikte görünür.</span>
+        <span>Solunda tampon dolar, sağındaki bant boşalır. Darboğazın iki imzası aynı anda ve yan yana görünür — yatayın en büyük öğretme avantajı.</span>
         <span class="hide">gizli: nav, sipariş şeridi</span>
       </div>
     </div>
     <div class="beat">
       <div class="beat-time">1:30–3:00</div>
       <div class="beat-body"><b>İlk işçi ataması</b>
-        <span>Oyuncu bir Luupie'yi Boya'ya atar. Süre <code>9.0 → 6.8</code> iner ve bant gözle görülür şekilde hızlanır. İlk “ben yaptım” anı.</span>
+        <span>Çekmece alttan yükselir, işçi şeridi görünür. Süre <code>9.0 → 6.8</code> iner ve bant gözle görülür şekilde hızlanır. İlk “ben yaptım” anı.</span>
         <span class="hide">gizli: yükseltme düğmesi (henüz para yok)</span>
       </div>
     </div>
     <div class="beat">
       <div class="beat-time">3:00–5:00</div>
       <div class="beat-body"><b>İlk sipariş</b>
-        <span>Sipariş şeridi yukarıdan iner. Sadece hızlı sipariş sınıfı; seçim yok, tek seçenek.</span>
-        <span class="hide">gizli: sipariş sınıfları, sıradaki sipariş slotu</span>
+        <span>Şerit üst ortadan iner. Tek seçenek, seçim yok.</span>
+        <span class="hide">gizli: sipariş sınıfları, sıradaki slot</span>
       </div>
     </div>
     <div class="beat">
       <div class="beat-time">5:00–7:00</div>
       <div class="beat-body"><b>Kontrollü arıza</b>
-        <span>Makine titrer ve duman çıkarır. Vardiya kartı belirir, kısa tamir oyunu sorunu çözer, bant 1 sn içinde yeniden başlar.</span>
+        <span>Makine titrer ve duman çıkarır. Alt sağda vardiya kartı belirir — oyuncuya kartların nerede yaşadığı burada öğretilir. Kısa tamir oyunu çözer, bant 1 sn içinde başlar.</span>
         <span class="hide">gizli: diğer mini oyunlar</span>
       </div>
     </div>
     <div class="beat">
       <div class="beat-time">7:00–9:00</div>
       <div class="beat-body"><b>İlk sevkiyat</b>
-        <span>Şerit <em>SEVK ET</em>'e döner. Para ilk kez HUD'a akar. Ekonominin kuralı burada öğretilir.</span>
+        <span>Üst şerit parlar, alt sağda <em>SEVK ET</em> kartı doğar. Para ilk kez HUD'a akar. Ekonominin kuralı ve “durum üstte, eylem altta” ilkesi aynı anda öğretilir.</span>
         <span class="hide">gizli: yok — bu an tam görünür olmalı</span>
       </div>
     </div>
     <div class="beat">
       <div class="beat-time">9:00–10:00</div>
       <div class="beat-body"><b>Repair Alley restorasyonu</b>
-        <span>Şehir sekmesi ilk kez açılır, ilk aşama başlatılır ve anlamlı bir bekleme süresi bırakılır — geri dönme sebebi.</span>
+        <span>Şehir sekmesi ilk kez açılır, ilk aşama başlar, anlamlı bekleme süresi bırakılır.</span>
         <span class="hide">gizli: Luupies sekmesi, kozmetikler</span>
       </div>
     </div>
@@ -761,32 +851,30 @@
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">11</span><h2>Bölge restorasyonu</h2></div>
+  <div class="sec-head"><span class="sec-num">13</span><h2>Bölge restorasyonu</h2></div>
 
-  <p>Bölgeler seviye kapısıyla değil, <strong>çok aşamalı projelerle</strong> açılır. Her aşama üretimden beslenir, her bölge fabrikanın çalışma kuralına yeni bir katman ekler.</p>
+  <p>Bölgeler seviye kapısıyla değil, çok aşamalı projelerle açılır. Her aşama üretimden beslenir, her bölge fabrikanın çalışma kuralına yeni bir katman ekler.</p>
 
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Bölge</th><th class="num">Hedef açılış</th><th>Eklediği kural</th><th>UI'da görünümü</th></tr></thead>
+      <thead><tr><th>Bölge</th><th class="num">Hedef açılış</th><th>Eklediği kural</th><th>Yatayda görünümü</th></tr></thead>
       <tbody>
-        <tr><td class="key">Repair Alley</td><td class="num">1–2. gün</td><td>Arıza ve kalite</td><td>Fabrikada tamir tezgahı belirir</td></tr>
-        <tr><td class="key">Candy District</td><td class="num">3–5. gün</td><td>Moral ve enerji</td><td>Yemekhane sahneye eklenir, sevgi barları görünür</td></tr>
-        <tr><td class="key">Psycho Lab</td><td class="num">7–10. gün</td><td>Risk ve overdrive</td><td>İstasyon çekmecesine overdrive anahtarı gelir</td></tr>
-        <tr><td class="key">Shipping Bay</td><td class="num">14–21. gün</td><td>Sipariş yönlendirme</td><td>Sipariş şeridi ikinci slot kazanır</td></tr>
+        <tr><td class="key">Repair Alley</td><td class="num">1–2. gün</td><td>Arıza ve kalite</td><td>Hattın sağ ucuna tamir tezgahı eklenir</td></tr>
+        <tr><td class="key">Candy District</td><td class="num">3–5. gün</td><td>Moral ve enerji</td><td>Yemekhane ön plana, hattın altına yerleşir</td></tr>
+        <tr><td class="key">Psycho Lab</td><td class="num">7–10. gün</td><td>Risk ve overdrive</td><td>Çekmeceye overdrive anahtarı gelir</td></tr>
+        <tr><td class="key">Shipping Bay</td><td class="num">14–21. gün</td><td>Sipariş yönlendirme</td><td>Sağ rampa büyür, şerit ikinci slot kazanır</td></tr>
         <tr><td class="key">Clocktower</td><td class="num">30. gün+</td><td>Prestij / yeni vardiya</td><td>Fabrika Devri arayüzü açılır</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>Restorasyon aşamaları Şehir sekmesinde <strong>inşaat halinde bina</strong> olarak gösterilir — ilerleme çubuğu değil, binanın kendisi kademeli olarak tamamlanır. Her aşama tamamlandığında fabrikaya bir şey eklenir; harita böylece dekor olmaktan çıkıp üretimin sonucu olur.</p>
+  <p>Yatay burada da işe yarar: her yeni bölge hattı <strong>uzatır</strong>, katlamaz. 4 istasyonluk hat 6'ya çıktığında düzen değişmez, sadece genişler — dikeyde bu ancak ikinci bir kat açarak mümkündü ve okunabilirliği öldürürdü.</p>
 
-  <p>Bu tarihler telemetriyle ayarlanacak başlangıç hedefleridir.</p>
+  <p>Restorasyon aşamaları Şehir sekmesinde <strong>inşaat halinde bina</strong> olarak gösterilir — ilerleme çubuğu değil, binanın kendisi kademeli tamamlanır. Bu tarihler telemetriyle ayarlanacak başlangıç hedefleridir.</p>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">12</span><h2>Uygulama sırası ve kabul ölçütleri</h2></div>
-
-  <p>İlk yapılacak şey yeni içerik değil. Mevcut üretim motoru, izometrik harita, yürüyen karakterler ve mini oyunlar korunur — hepsi tek bir akışın içine yeniden yerleştirilir.</p>
+  <div class="sec-head"><span class="sec-num">14</span><h2>Uygulama sırası ve kabul ölçütleri</h2></div>
 
   <div class="table-scroll">
     <table>
@@ -794,28 +882,28 @@
       <tbody>
         <tr>
           <td class="num">1</td>
-          <td class="key">Factory Home V2 dikey dilimi</td>
-          <td>Fabrika ekranın ≥%60'ını kaplıyor · istasyon hotspot'ları çalışıyor · çekmece ≤%33 · sipariş şeridi sabit · tampon fiziksel olarak görünüyor · offline kasa toplanıyor · bir bağlamsal mini oyun bağlı</td>
+          <td class="key">Yatay Factory Home dikey dilimi</td>
+          <td>Sahne tam ekran · arayüz kaplaması ≤%22 · zincir bandı hiçbir şeyle örtülmüyor · 4 istasyon soldan sağa · çekmece ≤164 px · tampon fiziksel yığın · kasa toplanıyor · bir bağlamsal mini oyun bağlı</td>
         </tr>
         <tr>
           <td class="num">2</td>
-          <td class="key">Ekonomi birleştirme</td>
-          <td>Hattan doğrudan para gelmiyor · sipariş tek satış noktası · hammadde altıdan bire indi · XP eğrisi artan</td>
+          <td class="key">Ergonomi geçişi</td>
+          <td>Tüm eylemler alt köşelerde · üst kenarda tek bir dokunulabilir eylem yok · SEVK ET vardiya kartı olarak doğuyor · dikey swipe eşiği yatayın yarısı</td>
         </tr>
         <tr>
           <td class="num">3</td>
-          <td class="key">FTUE ve dönüş</td>
-          <td>İlk 10 dakika beat'leri sırayla tetikleniyor · ilk 5 dakikada yasak ekranlar görünmüyor · dönüşte popup yok, kasa var · vardiya kartları önceliğe göre sıralanıyor</td>
+          <td class="key">Ekonomi birleştirme</td>
+          <td>Hattan doğrudan para gelmiyor · sipariş tek satış noktası · hammadde altıdan bire indi · offline tavan 6–8 saat · sipariş süreleri yeniden dengelendi</td>
         </tr>
         <tr>
           <td class="num">4</td>
-          <td class="key">Bölge restorasyonu</td>
-          <td>Bölgeler seviyeyle değil aşamalı projeyle açılıyor · her bölge fabrikaya görünür bir şey ekliyor</td>
+          <td class="key">FTUE ve dönüş</td>
+          <td>İlk 10 dk beat'leri sırayla tetikleniyor · ilk 5 dk'da yasak ekranlar görünmüyor · dönüşte popup yok, kamyon sağdan giriyor · vardiya kartları oturum başında 5'e kadar çıkıyor</td>
         </tr>
         <tr>
           <td class="num">5</td>
-          <td class="key">Meta derinlik</td>
-          <td>Kozmetikler karakterde görünüyor · koleksiyon setleri · Fabrika Devri · sezon yapısı</td>
+          <td class="key">Bölge restorasyonu ve meta</td>
+          <td>Bölgeler aşamalı projeyle açılıyor · hat uzuyor, katlanmıyor · kozmetikler karakterde görünüyor · Fabrika Devri</td>
         </tr>
       </tbody>
     </table>
@@ -823,17 +911,19 @@
 
   <h3>Ölçülebilir başarı sinyalleri</h3>
   <ul>
-    <li><strong>Fabrika ekran payı:</strong> ≥%60 (şu an ~%7)</li>
-    <li><strong>Karar mesafesi:</strong> Açılıştan ilk anlamlı karara ≤2 dokunuş — bugün panel derinliği bunu 4–5'e çıkarıyor</li>
-    <li><strong>Panelde geçen süre:</strong> Aktif seans süresinin ≤%25'i</li>
-    <li><strong>Çekmece yüksekliği:</strong> Hiçbir çekmece ekranın %33'ünü aşmıyor</li>
-    <li><strong>Ana navigasyon:</strong> 3 sekme, açılış her zaman Fabrika</li>
+    <li><strong>Arayüz kaplaması:</strong> ≤%22 — geri kalan her piksel fabrika</li>
+    <li><strong>Zincir bandı bütünlüğü:</strong> orta 180 px'i örten arayüz öğesi sayısı sıfır</li>
+    <li><strong>Karar mesafesi:</strong> Açılıştan ilk anlamlı karara ≤2 dokunuş</li>
+    <li><strong>Erişilebilirlik:</strong> Üst kenarda dokunulabilir eylem sayısı sıfır</li>
+    <li><strong>Çekmece yüksekliği:</strong> ≤164 px (%38)</li>
+    <li><strong>Ana navigasyon:</strong> 3 sekme, alt sol, açılış her zaman Fabrika</li>
     <li><strong>Mini oyun bağlamı:</strong> Katalogdan açılabilen mini oyun sayısı sıfır</li>
+    <li><strong>Oturum:</strong> Medyan 4–12 dk, günde 2–3 oturum</li>
   </ul>
 
   <div class="panel is-accent">
     <p class="panel-label">Tek cümlelik kabul testi</p>
-    <p>Oyunu hiç görmemiş birine telefonu uzatın ve hiçbir şey söylemeyin. <strong>30 saniye içinde “şurada bir sorun var” diyerek doğru istasyonu işaret edebiliyorsa</strong> Factory Home V2 çalışıyor demektir.</p>
+    <p>Oyunu hiç görmemiş birine telefonu yatay uzatın ve hiçbir şey söylemeyin. <strong>30 saniye içinde “şurada bir sorun var” diyerek doğru istasyonu işaret edebiliyorsa</strong> Factory Home V2 çalışıyor demektir.</p>
   </div>
 </section>
 
