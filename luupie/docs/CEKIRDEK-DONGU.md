@@ -1,5 +1,8 @@
 # Luupie — Çekirdek Üretim Döngüsü
 
+> ⚠️ **Bu doküman `LUUPIE-SPEC.md` içinde birleştirildi.**
+> Tek yetkili tasarım dokümanı odur; bu dosya tarihsel kayıt olarak duruyor.
+
 Fabrikayı bir sayaçtan gerçek bir idle simülasyona çeviren sistem: **darboğazlı
 üretim zinciri**. Mevcut mini oyunları da yük taşır hale getirir.
 

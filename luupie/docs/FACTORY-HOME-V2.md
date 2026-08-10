@@ -1,5 +1,8 @@
 # Luupie — Factory Home V2 · Yatay UX/UI Planı
 
+> ⚠️ **Bu doküman `LUUPIE-SPEC.md` içinde birleştirildi.**
+> Tek yetkili tasarım dokümanı odur; bu dosya tarihsel kayıt olarak duruyor.
+
 Yönelim yataya döndü. Bant istifi ölür, yerine tam ekran sahne ve köşelere
 demirlenmiş yüzen arayüz gelir. Üretim zinciri artık soldan sağa okunur —
 darboğaz tarifi mekânsal hale gelir.

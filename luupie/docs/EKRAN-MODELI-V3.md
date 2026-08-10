@@ -1,5 +1,8 @@
 # Luupie — Ekran Modeli V3: Tam Panel + Temiz Sahne
 
+> ⚠️ **Bu doküman `LUUPIE-SPEC.md` içinde birleştirildi.**
+> Tek yetkili tasarım dokümanı odur; bu dosya tarihsel kayıt olarak duruyor.
+
 **Bu doküman `FACTORY-HOME-V2.md` bölüm 5'teki "çekmece ≤%38" kuralını
 geçersiz kılar.** Referans: Hay Day.
 

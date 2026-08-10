@@ -1,5 +1,8 @@
 # Luupie — Ekonomi V4
 
+> ⚠️ **Bu doküman `LUUPIE-SPEC.md` içinde birleştirildi.**
+> Tek yetkili tasarım dokümanı odur; bu dosya tarihsel kayıt olarak duruyor.
+
 **Karar:** Oyun Luupie olarak kalır (yatay izometrik üretim hattı, karakterler,
 darboğaz okuması). **Ekonomi** `Ponchics Mobile Game Mechanics` dokümanından
 alınır ve hat oyununa uyarlanır.
