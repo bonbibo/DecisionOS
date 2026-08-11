@@ -422,5 +422,9 @@ Dört açık soru bu revizyonda kapatıldı:
 | 3 | Battle kadrosu ayrı mı | **Evet** — savaşan hatta çalışmaz | Gerçek kadro kararı doğurur |
 | 4 | Aşama 1 kapsamı | 1 bölge · 4 istasyon · 5 karakter | Sanat yükü dar boğaz |
 
-Kalan tek büyük çatal **motor kararı** — `URETIM-PLANI.md` §6, Faz 0'da
-kapatılıyor.
+| 5 | Motor | **Full Unity** — baştan sona, ara geçiş yok | Faz 4 combat ve mağaza dağıtımı; motor geçişi riski sıfırlanır |
+
+Teknik zemin `URETIM-PLANI.md` §9'da: 10 Hz simülasyon tick'i, ScriptableObject
+veri katmanı, sahte izometri, kayıt/çevrimdışı sözleşmesi. Web prototipi ürün
+değil — şartname referansı, yaratıcı test malzemesi ve oynanabilir demo olarak
+kalıyor.

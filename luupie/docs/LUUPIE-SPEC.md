@@ -8,6 +8,11 @@
 > geçerlidir**; istasyon adları TEŞHİS · SÖKME · ONARIM · CİLA olarak
 > okunur.
 
+> ⚙️ **Motor: full Unity.** Bu dokümandaki her sayı ScriptableObject olarak
+> yaşar, koda yazılmaz; her üretim hesabı tek bir 10 Hz `Simulate()`
+> fonksiyonundan geçer. Teknik zemin `URETIM-PLANI.md` §9.
+> `luupie/` altındaki web kodu **ürün değil, bu spec'in çalışan referansıdır**.
+
 **Tek yetkili tasarım dokümanı.** `CEKIRDEK-DONGU.md`, `FACTORY-HOME-V2.md`,
 `EKRAN-MODELI-V3.md` ve `EKONOMI-V4.md` burada birleştirildi; o dosyalar
 tarihsel kayıt olarak duruyor. Test raporları (`TEST-RAPORU-*.md`) ayrı kalır.

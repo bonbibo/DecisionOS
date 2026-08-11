@@ -6,6 +6,10 @@ listesi ve karar kapıları.
 Efor **adam-hafta** cinsinden verilir; takvim ekip büyüklüğüne göre değişir.
 Referans takvim **1 geliştirici + 1 sanatçı + yarım zamanlı tasarım** varsayar.
 
+> ⚙️ **Motor kararı verildi: oyun baştan sona Unity'de yazılacak.** Web
+> prototipi ürün değil; §9'da tanımlanan üç işi görür ve orada kalır.
+> Ara geçiş, yeniden yazım veya çift kod tabanı **yoktur**.
+
 ---
 
 ## 1. Planın tek kuralı
@@ -30,39 +34,52 @@ değerli bir vekil** konur, o faz gelince vekil gerçek sistemle değiştirilir.
 ## 2. Faz haritası
 
 ```
-FAZ 0        FAZ 1            FAZ 2         FAZ 3          FAZ 4        FAZ 5
-Kilit    →   Tamirhane    →   Yemekhane →   Genişleme  →   Battle   →   Yumuşak
-1 hf         4–5 hf           2–3 hf        3–4 hf         4–5 hf       lansman
-             ▲                ▲             ▲              ▲            4–6 hf
-          KAPI 1           KAPI 2        KAPI 3         KAPI 4
-        "darboğaz        "aktif oyun   "ekonomi       "battle
-         okunuyor mu"     tutuyor mu"   14 gün         kilitlemiyor
-                                        ayakta mı"      mu"
+FAZ 0          FAZ 1            FAZ 2         FAZ 3          FAZ 4        FAZ 5
+Unity iskelet→ Tamirhane    →   Yemekhane →   Genişleme  →   Battle   →   Yumuşak
+2 hf           6–7 hf           2–3 hf        3–4 hf         4–5 hf       lansman
+               ▲                ▲             ▲              ▲            4–6 hf
+            KAPI 1           KAPI 2        KAPI 3         KAPI 4
+          "darboğaz        "aktif oyun   "ekonomi       "battle
+           okunuyor mu"     tutuyor mu"   14 gün         kilitlemiyor
+                                          ayakta mı"      mu"
 ```
 
-Her kapı **geçilemezse durulur veya yön değişir**. Kriterler §8'de.
+Her kapı **geçilemezse durulur veya yön değişir**. Kriterler §12'de.
 Mimari aşamalarıyla eşleşme: Aşama 1 → Faz 1 · Aşama 2 → Faz 2 ·
 Aşama 3 → Faz 3 · Aşama 4 → Faz 4.
 
 ---
 
-## 3. Faz 0 — Kilit ve temizlik · 1 hafta · 1.5 adam-hafta
+## 3. Faz 0 — Unity iskeleti · 2 hafta · ~3.5 adam-hafta
 
-Kod yazılmadan önce kapatılması gereken beş şey.
+Motor kararı verildiği için Faz 0 artık bir "karar haftası" değil, **temel
+atma** haftası. Buradaki her madde Faz 1–4'ün üstüne bineceği zemin; sonradan
+değiştirilmesi pahalı olan şeyler burada kilitlenir.
 
 | # | İş | Efor | Not |
 |---|---|---|---|
-| 0.1 | **Motor kararı** | 2 gün | §6 — planın en kritik maddesi |
-| 0.2 | **Bloke hatayı düzelt** | 0.5 gün | Sipariş düğmesi nav'ın altında; oyun 45 sn'de kilitleniyor (`LUUPIE-SPEC.md` §18 #1) |
-| 0.3 | **Sanat stili kilidi** | 2 gün | Tamirhane anahtar karesi; mevcut karakterlerle uyum testi |
-| 0.4 | **Telemetri şeması** | 1 gün | Kapıların ölçüleceği olay listesi baştan tanımlanır |
-| 0.5 | **Yaratıcı test kurulumu** | 1 gün | §7 — Faz 1 ile paralel koşar |
+| 0.1 | Unity projesi + sürüm kilidi + repo/LFS/CI | 0.4 | §9.1 |
+| 0.2 | **Simülasyon tick mimarisi** (10 Hz, offline ile ortak kod yolu) | 1.0 | §9.2 — en kritik madde |
+| 0.3 | **ScriptableObject veri katmanı** — hiçbir denge sayısı kodda değil | 0.8 | §9.3 |
+| 0.4 | İzometrik sahne iskeleti: sıralama, kamera, çözünürlük/güvenli alan | 0.6 | §9.4 |
+| 0.5 | Sprite atlası + mevcut PNG'lerin içe aktarım hattı | 0.3 | §9.5 |
+| 0.6 | Kayıt/yükleme + çevrimdışı zaman doğrulaması | 0.4 | §9.6 |
+| 0.7 | Telemetri olay şeması (kapılar buradan ölçülecek) | 0.2 | — |
+| 0.8 | Sanat stili kilidi: tamirhane anahtar karesi | *(sanat)* | Faz 1 ile paralel |
+| 0.9 | Web prototipinde bloke hatayı düzelt — **yalnız referans/test için** | 0.2 | §9.7 |
 
-**Çıktı:** Çalışan bir build, yazılı motor kararı, yayında bir yaratıcı test.
+**Çıktı:** Boş ama doğru kurulmuş bir Unity projesi — içinde tek bir istasyon
+10 Hz'de tikliyor, verisi ScriptableObject'ten geliyor, uygulamayı kapatıp
+açınca çevrimdışı geçen süre doğru işleniyor.
+
+**Faz 0'ın kabul testi:** Uygulamayı kapat, cihaz saatini 3 saat ileri al, aç.
+İstasyon **canlı çalışmış gibi** aynı sonucu vermeli. Bu tek test, idle bir
+oyunun en pahalı hatasını (çevrimdışı ile çevrimiçi matematiğin ayrışması)
+başta yakalar.
 
 ---
 
-## 4. Faz 1 — Tamirhane çekirdeği · 4–5 hafta · ~11 adam-hafta
+## 4. Faz 1 — Tamirhane çekirdeği · 6–7 hafta · ~14 adam-hafta
 
 **Tek soru:** *Oyuncu hattaki darboğazı gözle bulup düzeltebiliyor ve buna
 geri dönüyor mu?*
@@ -71,12 +88,17 @@ Yemekhane yok, şehir yok, battle yok. Kaynaklar sabit oranla akar, kantin rafı
 morali 60'ta tutar — **hat ×1.00'de dengeli çalışır.** Halka kapalı: bozuk
 oyuncak gelir, onarılır, sevk edilir, para istasyona yatırılır.
 
+> Bu faz Unity'de **sıfırdan** yazılır. Web prototipi kopyalanacak kod değil,
+> okunacak şartname: hangi sayının ne yaptığı, hangi görsel dilin çalıştığı
+> orada denenmiş durumda. `LUUPIE-SPEC.md` yetkili kaynak, prototip onun
+> çalışan örneği.
+
 ### 1a — Ana oyun mekaniği
 
 | # | İş paketi | Bağımlılık | Efor |
 |---|---|---|---|
-| 1.1 | İstasyon yeniden adlandırma + ikon (TEŞHİS·SÖKME·ONARIM·CİLA) | 0.3 | 0.3 |
-| 1.2 | **Bozuk oyuncak girdi modeli** — sonsuz hammadde kaldırılır | 1.1 | 0.8 |
+| 1.1 | Dört istasyon + bant + tampon (TEŞHİS·SÖKME·ONARIM·CİLA) | 0.2, 0.4 | 1.5 |
+| 1.2 | **Bozuk oyuncak girdi modeli** — sonsuz hammadde yok | 1.1 | 0.8 |
 | 1.3 | **2 hasar tipi + hareketli darboğaz** | 1.2 | 1.0 |
 | 1.4 | Çıktı tamponu dolan istasyon **dursun** (§18 #8) | 1.2 | 0.5 |
 | 1.5 | Üç kaynak + istasyon girdi maliyeti + aç kalma (§18 #9) | 1.2 | 0.8 |
@@ -87,23 +109,30 @@ oyuncak gelir, onarılır, sevk edilir, para istasyona yatırılır.
 | 1.10 | Upgrade matrix'i tabloya bağla (§18 #10) | 1.5 | 0.5 |
 | 1.11 | Enerji + overdrive + geri dönüşüm (§18 #13, #14) | 1.7 | 0.8 |
 | 1.12 | Öneri motoru: boştaki işçileri saysın (§18 #7) | 1.6 | 0.3 |
+| 1.13 | Karakter yürüme/çalışma davranışı + izometrik yol bulma | 0.4 | 1.0 |
 
 ### 1b — Ekran ve his
 
 | # | İş paketi | Efor |
 |---|---|---|
-| 1.13 | Panel sistemi %66 × %90 + `overflow-y: auto` (§18 #2, #20) | 0.5 |
-| 1.14 | Yaşam alanı dokunulmazlığı — çakışan dokunuşları temizle (§18 #3) | 0.5 |
-| 1.15 | **Dönüş deltası koreografisi** — zorunlu | 0.5 |
-| 1.16 | Sevkiyat kutlaması (§18 #4) | 0.5 |
-| 1.17 | Yürüme sprite'ları kullanılsın (§18 #17) | 0.3 |
-| 1.18 | Mikro geri bildirim + ilerleme çubuğu (§18 #16, #18) | 0.5 |
-| 1.19 | **İlk 10 dakika akışı** (`LUUPIE-SPEC.md` §16) | 1.0 |
-| 1.20 | İç test turu + denge iterasyonu | 1.5 |
+| 1.14 | UI iskeleti: Canvas Scaler, güvenli alan, üç ekran bölgesi (`LUUPIE-SPEC.md` §11) | 0.8 |
+| 1.15 | Panel sistemi %66 × %90 + kaydırılabilir içerik (§18 #2, #20) | 0.5 |
+| 1.16 | Yaşam alanı dokunulmazlığı — raycast katmanları ayrılır (§18 #3) | 0.4 |
+| 1.17 | **Dönüş deltası koreografisi** — zorunlu | 0.5 |
+| 1.18 | Sevkiyat kutlaması (§18 #4) | 0.5 |
+| 1.19 | Mikro geri bildirim + ilerleme çubuğu (§18 #16, #18) | 0.5 |
+| 1.20 | **İlk 10 dakika akışı** (`LUUPIE-SPEC.md` §16) | 1.0 |
+| 1.21 | Cihaz matrisi ilk geçiş + performans profili | 0.5 |
+| 1.22 | İç test turu + denge iterasyonu | 1.5 |
 
-**Kritik yol:** 1.2 → 1.3 → 1.6 → 1.7. Hareketli darboğaz (1.3) en riskli
+**Kritik yol:** 1.1 → 1.2 → 1.3 → 1.6 → 1.7. Hareketli darboğaz (1.3) en riskli
 kalem — hasar tipi karışımı hattı gerçekten kaydırmıyorsa fikir çalışmıyor
 demektir ve bunu **Faz 1'de** öğrenmek gerekir.
+
+**Unity'nin buraya kattığı:** 1.13, 1.17, 1.18, 1.19 web'de en zorlanan
+kalemlerdi (animasyon, tween, parçacık, sıralama). Unity'de bunlar hazır
+sistemler; Faz 1'in "his" tarafı web'e göre daha ucuz, mekanik tarafı daha
+pahalı. Net etki yaklaşık **+3 adam-hafta**.
 
 **Faz 1 sonunda elde:** 1 bölge · 4 istasyon · 5 karakter · 2 hasar tipi.
 **Tek başına yayınlanabilir bir oyun.**
@@ -162,16 +191,18 @@ oynanarak doğrulanmalı.
 
 ---
 
-## 7. Faz 4 — Battle · 4–5 hafta · ~12 adam-hafta
+## 7. Faz 4 — Battle · 4–5 hafta · ~10 adam-hafta
 
 **Tek soru:** *Battle bir kısayol olarak kalıyor mu, yoksa fiilen zorunlu mu oldu?*
 
-Üç katmanın en pahalısı — sıfırdan combat.
+Üç katmanın en pahalısı — sıfırdan combat. **Motor kararının en çok karşılığını
+verdiği faz burası:** dalga yönetimi, çarpışma, hedefleme, animasyon geçişleri
+ve nesne havuzu Unity'de hazır sistemler.
 
 | # | İş paketi | Bağımlılık | Efor |
 |---|---|---|---|
-| 4.1 | Battle sahnesi + dalga iskeleti | 3.8 | 1.5 |
-| 4.2 | Düşman davranışı + 3 düşman tipi | 4.1 | 2.0 |
+| 4.1 | Battle sahnesi + dalga iskeleti | 3.8 | 1.2 |
+| 4.2 | Düşman davranışı + 3 düşman tipi | 4.1 | 1.5 |
 | 4.3 | Kadro seçimi — **savaşan hatta çalışamaz** | 4.1 | 0.8 |
 | 4.4 | **Ekipman kilidi:** onarılmış oyuncak rehin, siparişle yarışır | 1.9, 4.3 | 0.8 |
 | 4.5 | Yatkınlık sisteminin savaşa uyarlanması | 4.3 | 1.0 |
@@ -188,13 +219,13 @@ bir hesap 14 gün paralel koşturulur. Hedef oran **1.8×–2.2×**. 2.5×'in ü
 
 ---
 
-## 8. Faz 5 — Yumuşak lansman · 4–6 hafta · ~10 adam-hafta
+## 8. Faz 5 — Yumuşak lansman · 4–6 hafta · ~8 adam-hafta
 
 | # | İş | Efor |
 |---|---|---|
-| 5.1 | Mağaza build'i, sarmalayıcı, cihaz matrisi | 2.0 |
+| 5.1 | Mağaza build'i (iOS + Android), imzalama, cihaz matrisi | 1.2 |
 | 5.2 | Analitik + kohort raporlama | 1.0 |
-| 5.3 | Reklam SDK + ödüllü reklam yerleşimleri | 1.5 |
+| 5.3 | Reklam SDK (LevelPlay / AppLovin MAX) + ödüllü yerleşimler | 1.0 |
 | 5.4 | Mağaza ekonomisi (paket, kaynak, hızlandırma) | 1.5 |
 | 5.5 | Ses tasarımı (§18 #23) | 1.0 |
 | 5.6 | Yerelleştirme iskeleti | 0.5 |
@@ -206,29 +237,110 @@ halde Faz 2'de kurulan tek gerçek aktif-oyun sebebi çöker.
 
 ---
 
-## 9. Motor kararı
+## 9. Unity mimarisi
 
-Planın en büyük çatalı. Mevcut build **web** (DOM + canvas, bağımlılıksız).
+**Karar: oyun baştan sona Unity.** Ara motor, geçiş fazı veya çift kod tabanı
+yok. Bu bölüm Faz 0'da kurulacak zemini tanımlar — sonradan değiştirilmesi
+pahalı olan her şey burada.
 
-| | Web (mevcut) | Unity |
+**Takasın açık hâli:** Faz 1'e varış web'e göre **~2–3 hafta geç**, ama
+motor geçişi riski **sıfır**, Faz 4 combat'ı **~2 adam-hafta ucuz**, Faz 5
+mağaza/SDK tarafı **~2 adam-hafta ucuz**. Toplam efor neredeyse aynı; fark
+**riskin kaybolması.**
+
+### 9.1 Sürüm ve paketler
+
+| | Seçim | Gerekçe |
 |---|---|---|
-| Faz 1'e varış | **Çok hızlı** — kod tabanı hazır | Yavaş — sıfırdan kurulum |
-| 60 fps, çok sprite | Riskli | **Güçlü** |
-| **Faz 4 combat** | **Zayıf** | **Güçlü** |
-| Mağaza dağıtımı | Sarmalayıcı gerekir | **Yerel** |
-| Yaratıcı test | Anında link | Build gerekir |
-| Reklam SDK / analitik | Zahmetli | **Standart** |
+| Sürüm | **Unity 6 LTS** — tam sürüm Faz 0'da yazılı olarak sabitlenir | Faz 4'e kadar sürüm yükseltmesi yok |
+| Render | **URP 2D** + 2D Renderer | Sprite ışıklandırma, tek geçişte mobil performans |
+| Girdi | **Input System** | Çoklu dokunuş, mini oyunlardaki swipe eşikleri |
+| UI | **UI Toolkit** (paneller) + Canvas (diegetic baloncuklar) | Paneller veri odaklı; baloncuklar sahneye demirli |
+| Varlık | **Addressables** | Bölge sanatı Faz 3'te akışla gelir, ilk indirme şişmez |
+| Depo | **Git + Git LFS** | Sprite atlasları ve ses ikili dosyalar |
 
-**Öneri: Faz 1 web'de, KAPI 1 sonrası Unity'ye geç.** Gerekçe: KAPI 1'in
-sorusu ("darboğaz okunuyor mu") **tamamen tasarım sorusu** — motorla ilgisi
-yok ve mevcut kod oraya en hızlı varır. KAPI 1 geçilirse Faz 2 Unity'de
-kurulur; Faz 1 kodu baştan **atılacak** ilan edilir.
+Faz 5'e kadar **üçüncü parti eklenti alınmaz** (tween/kayıt/UI kütüphaneleri
+dâhil). Tek istisna: reklam/analitik SDK'ları, Faz 5'te.
 
-Bedel: Faz 2 başında ~1 hafta kurulum. Kazanç: yanlış türe 4 ay harcamama.
+### 9.2 Simülasyon tick'i — planın teknik kalbi
 
-> Ekip Unity'de belirgin şekilde hızlıysa Faz 1 de Unity'de yapılabilir;
-> takvim ~1 hafta uzar, Faz 2 kurulumu düşer. Karar ekip aşinalığına bağlı ve
-> **Faz 0'da yazılı olarak** verilmeli.
+Idle bir oyunun en pahalı hatası, çevrimiçi ve çevrimdışı matematiğin
+ayrışmasıdır. Panzehir tek kural:
+
+> **Tek bir `Simulate(deltaTime)` fonksiyonu vardır. Canlı oyun onu saniyede
+> 10 kez çağırır; çevrimdışı dönüş onu hızlandırılmış olarak çağırır. Başka
+> hiçbir yerde üretim hesabı yapılmaz.**
+
+| | Kural |
+|---|---|
+| Tick | Sabit **10 Hz**, `Time.deltaTime`'dan bağımsız |
+| Çevrimdışı | Aynı fonksiyon, blok blok ileri sarılır (tavan 4 saat) |
+| Görsel | Bant, karakter, animasyon **kare hızında** akar — simülasyondan ayrı |
+| Belirlilik | Aynı girdi = aynı çıktı; kare hızı sonucu değiştirmez |
+
+Görsel katman simülasyonu **okur**, ona yazmaz. Bu ayrım Faz 0'da kurulmazsa
+Faz 3'teki 14 günlük ekonomi doğrulaması (3.11) yapılamaz hâle gelir.
+
+### 9.3 Veri katmanı — hiçbir denge sayısı kodda değil
+
+`LUUPIE-SPEC.md`'deki her sayı **ScriptableObject** olarak yaşar: istasyon
+hızları, upgrade matrix altı parametresi, moral düşüş hızları, kantin rafı
+verimi, sipariş primleri, hasar tipi ağırlıkları, bina üretim eğrileri.
+
+Sebep tek: tasarımcı dengeyi geliştirici olmadan çevirebilmeli, ve 14 günlük
+simülasyon (3.11) aynı verinin üzerinden koşabilmeli. Sabit sayı yazılmış her
+yer, ileride bir denge iterasyonunun bloke olduğu yerdir.
+
+### 9.4 İzometrik sahne
+
+| | Seçim |
+|---|---|
+| Projeksiyon | Ortografik kamera, sprite tabanlı sahte izometri (Tilemap değil) |
+| Sıralama | **Özel eksen sıralaması** (`Custom Axis Sort` Y+Z) — karakterler makinelerin önünden/arkasından geçebilmeli |
+| Referans çözünürlük | **1920 × 886** (932 × 430 tasarımının 2×'i), yalnız **yatay** |
+| Güvenli alan | Çentik/ada dinamik okunur; köşe kromu ona demirlenir |
+| Kural | `LUUPIE-SPEC.md` §11 — yaşam alanına arayüz giremez; ayrı raycast katmanı ile zorlanır |
+
+Sahte izometri seçilmesinin sebebi mevcut sanat: karakterler ve fabrika zaten
+elde çizilmiş izometrik sprite'lar. Tilemap gerçek bir grid dayatır ve bu
+sanatı yeniden üretmeyi gerektirirdi.
+
+### 9.5 Sprite hattı
+
+`tools/extract_sprites.py` **korunuyor** — karakter sayfasından PNG üreten
+tekrarlanabilir hat o. Unity tarafında çıktılar **Sprite Atlas**'a girer
+(karakter atlası / makine atlası / UI atlası ayrı).
+
+Animasyon: kare kare sprite sheet. Faz 1'de 5 karakter × 4 durum = 20 set
+(`§11`). İskeletsel animasyona (Spine vb.) **girilmiyor** — sanat stili kare
+kareye uygun ve ek lisans/eğitim maliyeti taşımıyor.
+
+### 9.6 Kayıt ve çevrimdışı
+
+| | Kural |
+|---|---|
+| Format | JSON, sürümlenmiş şema, ileri uyumlu okuma |
+| Yazma | Atomik (geçici dosya + taşıma) — yarım kayıt olmaz |
+| Zaman | Cihaz saati **doğrulanır**; ileri alma tespit edilirse kazanç verilmez |
+| Tavan | 4 saat (`LUUPIE-SPEC.md` §17 offline tavanı) |
+| Bulut | Faz 5'te; Faz 1–4 yerel |
+
+### 9.7 Web prototipinin yeni rolü
+
+Prototip **ürün değil** ama atılmıyor da. Üç işi var:
+
+| İş | Ne zaman |
+|---|---|
+| **Şartname referansı** | Sürekli — hangi sayının ne yaptığı ve hangi görsel dilin çalıştığı orada denenmiş |
+| **Yaratıcı test malzemesi** | §10 — ekran görüntüsü ve video üretebiliyor, Unity build'ini beklemez |
+| **Oynanabilir demo** | Yatırımcı/ekip gösterimi; link yeterli, kurulum gerekmez |
+
+Bunun için Faz 0'daki tek bakım işi kalıyor: **bloke hatayı düzelt** (0.9).
+Ondan sonra prototibe kod eklenmez.
+
+> ⚠️ **Kural:** Prototip kodu Unity'ye **taşınmaz**. Referans olarak okunur,
+> kopyalanmaz. Aksi hâlde JavaScript'in yapısal alışkanlıkları C#'a sızar ve
+> §9.2'deki tick mimarisi baştan bozulur.
 
 ---
 
@@ -307,7 +419,9 @@ gelir. Faz 1 animasyon yükü **20 sete** iner.
 | Kendiliğinden dönüş | 2. oturumu **hatırlatmasız** başlatan: ≥ %50 |
 | Hareketli darboğaz | Oyuncu hasar tipine göre atamayı değiştiriyor mu |
 | Yaratıcı test CPI | Hedef aralığın içinde (§10) |
-| JS/çalışma hatası | **0** |
+| **Performans** | Hedef cihazda **60 fps**, 10 karakter + 4 istasyon aktifken |
+| **Çevrimdışı tutarlılığı** | 4 saatlik dönüşün sonucu, canlı koşturmayla **birebir** aynı |
+| Çalışma hatası | **0** |
 
 Geçemezse: darboğaz **görsel dili** mi zayıf, yoksa mekanik mi sığ — ayırt et.
 İkincisiyse Yemekhane'yi (TM) çekirdeğe terfi ettirmek yedek plandır; sahne
@@ -365,8 +479,11 @@ zaman hırsızıdır; mekanik değil, bağ yanlıştır.
 | **Sanat kapsamı patlar** | Takvim ×2 | 5 karakterle başla; §11 kararı |
 | **Malzeme bollaşır** | Yemekhane bedava buff olur | KAPI 2'de "ortalama moral 65–85" ölçütü |
 | **Battle fiilen zorunlu olur** | Yan oyun ana oyunu rehin alır | KAPI 4'te 1.8×–2.2× bandı; Hurdalık ayarlanır |
-| **Motor kararı gecikirse** | Faz 2'de yeniden yazım | Faz 0'da kapatılır, ertelenmez |
-| **Prototip kodu üretime taşınmak istenir** | Teknik borç | Faz 1 kodu **atılacak** ilan edilsin |
+| **Simülasyon ile görsel iç içe geçer** | Çevrimdışı ≠ çevrimiçi; ekonomi doğrulanamaz | §9.2 tek `Simulate()` kuralı; Faz 0 kabul testi |
+| **Denge sayıları koda sızar** | Her iterasyon geliştirici ister, 3.11 bloke olur | §9.3 ScriptableObject kuralı; kod incelemesinde aranır |
+| **Prototip kodu Unity'ye taşınır** | JS alışkanlıkları mimariyi bozar | §9.7 — referans olarak okunur, kopyalanmaz |
+| **Unity kurulumu Faz 1'i yer** | İlk yayın gecikir | Faz 0 ayrı fazlandı (2 hf); Faz 1 kurulumla uğraşmaz |
+| **Sürüm/paket yükseltmesi ortada gelir** | Kırılma, kayıp gün | Faz 0'da sürüm kilidi; Faz 4'e kadar yükseltme yok |
 | **Reklam moral satmaya başlar** | Aktif oyun sebebi ölür | §8 kuralı sözleşme gibi tutulur |
 | **Faz 4'e hiç gelinemez** | Yatırım boşa | Faz 1 tek başına yayınlanabilir tasarlandı |
 
@@ -374,21 +491,27 @@ zaman hırsızıdır; mekanik değil, bağ yanlıştır.
 
 ## 14. İlk iki hafta — somut
 
-**1. hafta**
-1. Motor kararı toplantısı → **yazılı** karar *(0.1)*
-2. Bloke hata düzeltilir, build oynanır hâle gelir *(0.2)*
-3. Sanat: tamirhane anahtar karesi *(0.3)*
-4. Telemetri olay listesi yazılır *(0.4)*
-5. Yaratıcı test konseptleri brief'i *(10.1)*
+**1. hafta — proje ayağa kalkar**
+1. Unity projesi kurulur, sürüm yazılı olarak sabitlenir, repo + LFS + CI *(0.1)*
+2. **`Simulate(deltaTime)` iskeleti**: tek istasyon, 10 Hz, kare hızından bağımsız *(0.2)*
+3. Denge verisi ScriptableObject'e taşınır — istasyon hızı koda yazılmaz *(0.3)*
+4. Sanat: tamirhane anahtar karesi başlar *(0.8)*
+5. Web prototipindeki bloke hata düzeltilir — demo/test malzemesi olarak *(0.9)*
 
-**2. hafta**
-6. Bozuk oyuncak girdi modeli kodlanır *(1.2)*
-7. İstasyon adları + ikonlar *(1.1)*
-8. Tampon durma kuralı *(1.4)*
-9. Yaratıcı test yayına alınır *(10.2)*
+**2. hafta — zemin kapanır**
+6. İzometrik sahne: kamera, özel eksen sıralaması, güvenli alan *(0.4)*
+7. Sprite atlası + mevcut PNG'lerin içe aktarımı *(0.5)*
+8. Kayıt/yükleme + çevrimdışı ileri sarma, **aynı `Simulate()` üzerinden** *(0.6)*
+9. Telemetri olay şeması yazılır *(0.7)*
+10. Yaratıcı test yayına alınır *(10.1, 10.2)*
 
-İki hafta sonunda elde: **bozuk oyuncakların gerçekten aktığı, tamponu dolunca
-duran bir hat** ve **yayında bir yaratıcı test**.
+**İki hafta sonunda elde:** Tek istasyonun 10 Hz'de tiklediği, verisini
+ScriptableObject'ten okuyan, kapatıp açınca çevrimdışı süreyi doğru işleyen
+bir Unity projesi — ve yayında bir yaratıcı test.
+
+Az görünebilir; öyle değil. Bu iskelet doğru kurulursa Faz 1–4'ün tamamı onun
+üzerine **eklenerek** gelir. Yanlış kurulursa Faz 3'te fark edilir ve orada
+düzeltmenin bedeli haftalarla ölçülür.
 
 ---
 
@@ -396,15 +519,31 @@ duran bir hat** ve **yayında bir yaratıcı test**.
 
 | Faz | Süre | Efor (kod) | Efor (sanat) | Çıktı | Kapı |
 |---|---|---|---|---|---|
-| 0 · Kilit | 1 hf | 1.5 | 0.5 | Motor kararı, çalışan build, test yayında | — |
-| 1 · Tamirhane | 4–5 hf | ~11 | ~7 | **Yayınlanabilir idle oyun** | Darboğaz okunuyor mu |
+| 0 · Unity iskeleti | 2 hf | ~3.5 | ~0.5 | Tick + veri + sahne + kayıt zemini | Çevrimdışı = çevrimiçi |
+| 1 · Tamirhane | 6–7 hf | ~14 | ~7 | **Yayınlanabilir idle oyun** | Darboğaz okunuyor mu |
 | 2 · Yemekhane | 2–3 hf | ~6 | ~3 | Aktif katman, %30 moral bandı | Aktif oyun tutuyor mu |
 | 3 · Genişleme | 3–4 hf | ~8 | ~4 | Gerçek kaynak ekonomisi, 4 hasar tipi | 14 gün ayakta mı |
-| 4 · Battle | 4–5 hf | ~12 | ~3.5 | Survivor yan mod | Kilitlemiyor mu |
-| 5 · Lansman | 4–6 hf | ~10 | ~1 | Mağaza build'i, UA | ROAS |
+| 4 · Battle | 4–5 hf | ~10 | ~3.5 | Survivor yan mod | Kilitlemiyor mu |
+| 5 · Lansman | 4–6 hf | ~8 | ~1 | Mağaza build'i, UA | ROAS |
 
-**Toplam ≈ 48 adam-hafta kod + 19 adam-hafta sanat.**
-Üç kişilik ekiple **Faz 1 yayınına ~6 hafta**, tam yumuşak lansmana **~5–6 ay**.
+**Toplam ≈ 50 adam-hafta kod + 19 adam-hafta sanat.**
+Üç kişilik ekiple **Faz 1 yayınına ~8–9 hafta**, tam yumuşak lansmana
+**~6–7 ay**.
 
-Sanat en dar boğaz; karakter animasyon kapsamı (§11) kontrol altında
+### Web planına göre fark
+
+| | Web-önce | **Full Unity** |
+|---|---|---|
+| Faz 1 yayını | ~6 hafta | **~8–9 hafta** |
+| Toplam kod eforu | ~48 a-hf | ~50 a-hf |
+| Motor geçişi riski | 1 hafta + yeniden yazım | **Yok** |
+| Faz 4 combat | ~12 a-hf | **~10 a-hf** |
+| Faz 5 mağaza/SDK | ~10 a-hf | **~8 a-hf** |
+| 60 fps garantisi | Riskli | Ölçülebilir |
+
+İlk yayın 2–3 hafta gecikiyor, karşılığında **bir motor geçişi ve onun
+getireceği yeniden yazım tamamen ortadan kalkıyor.** Faz 4'e gidilecekse bu
+takas her koşulda kârlı.
+
+Sanat hâlâ en dar boğaz; karakter animasyon kapsamı (§11) kontrol altında
 tutulursa takvim tutar.
