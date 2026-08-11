@@ -1,5 +1,12 @@
 # Luupie — Ana Spec
 
+
+> 🔀 **Çekirdek tür değişti:** Konsept 02 (Restoran Vardiyası) seçildi.
+> Çekirdek döngü, üretim zinciri ve mini oyun bölümleri için
+> `KONSEPT-02-RESTORAN.md` geçerlidir. Bu dokümandaki ekran modeli,
+> karakter sistemi, ekonomi meta katmanı ve kabul ölçütleri aynen
+> ayakta kalır; hangi bölümün taşındığı KONSEPT-02 §9'da listeli.
+
 **Tek yetkili tasarım dokümanı.** `CEKIRDEK-DONGU.md`, `FACTORY-HOME-V2.md`,
 `EKRAN-MODELI-V3.md` ve `EKONOMI-V4.md` burada birleştirildi; o dosyalar
 tarihsel kayıt olarak duruyor. Test raporları (`TEST-RAPORU-*.md`) ayrı kalır.
