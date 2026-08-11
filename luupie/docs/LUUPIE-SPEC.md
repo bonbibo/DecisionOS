@@ -1,11 +1,12 @@
 # Luupie — Ana Spec
 
 
-> 🔀 **Çekirdek tür değişti:** Konsept 02 (Restoran Vardiyası) seçildi.
-> Çekirdek döngü, üretim zinciri ve mini oyun bölümleri için
-> `KONSEPT-02-RESTORAN.md` geçerlidir. Bu dokümandaki ekran modeli,
-> karakter sistemi, ekonomi meta katmanı ve kabul ölçütleri aynen
-> ayakta kalır; hangi bölümün taşındığı KONSEPT-02 §9'da listeli.
+> 🏗 **Üst düzey yapı:** `OYUN-MIMARISI.md` — üç katman (Tamirhane idle ·
+> Yemekhane ara oyun · Battle + Genişleme yan oyun).
+> Bu dokümandaki üretim zinciri, çarpan formülü, tampon kuralı, ekonomi,
+> ekran modeli ve kabul ölçütleri **ana oyun (Tamirhane) için aynen
+> geçerlidir**; istasyon adları TEŞHİS · SÖKME · ONARIM · CİLA olarak
+> okunur.
 
 **Tek yetkili tasarım dokümanı.** `CEKIRDEK-DONGU.md`, `FACTORY-HOME-V2.md`,
 `EKRAN-MODELI-V3.md` ve `EKONOMI-V4.md` burada birleştirildi; o dosyalar

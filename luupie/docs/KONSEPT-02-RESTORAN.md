@@ -1,6 +1,14 @@
 # Luupie — Konsept 02: Restoran Vardiyası
 
 **Seçilen çekirdek:** Time-Management / Service · *"Yemeği sen yap, oyuncaklar
+
+> 🔻 **Kapsam değişti:** Bu konsept artık **ana oyun değil, ara oyun**.
+> `OYUN-MIMARISI.md` §4 geçerlidir: 60–90 sn'lik yemekhane turu, müşteriler
+> kendi işçilerin, ödül moral. Otonom garson / psycho bölümü ana oyuna
+> (Tamirhane) taşındı. Aşağıdaki mutfak zinciri, kontrol şeması ve TM
+> mekanikleri aynen kullanılır; bölüm/yıldız ilerlemesi ve restoran meta
+> katmanı kullanılmaz.
+
 servis etsin."*
 
 Bu doküman `LUUPIE-SPEC.md`'nin çekirdek döngü bölümünü değiştirir. Ekran
