@@ -1,0 +1,155 @@
+{
+ "wolf": {
+  "head": {
+   "file": "wolf_head.png",
+   "w": 128,
+   "h": 85
+  },
+  "sweet": {
+   "file": "wolf_sweet.png",
+   "w": 125,
+   "h": 171
+  },
+  "psycho": {
+   "file": "wolf_psycho.png",
+   "w": 122,
+   "h": 172
+  }
+ },
+ "punk": {
+  "head": {
+   "file": "punk_head.png",
+   "w": 111,
+   "h": 106
+  },
+  "sweet": {
+   "file": "punk_sweet.png",
+   "w": 118,
+   "h": 189
+  },
+  "psycho": {
+   "file": "punk_psycho.png",
+   "w": 119,
+   "h": 188
+  }
+ },
+ "unicorn": {
+  "head": {
+   "file": "unicorn_head.png",
+   "w": 96,
+   "h": 106
+  },
+  "sweet": {
+   "file": "unicorn_sweet.png",
+   "w": 119,
+   "h": 186
+  },
+  "psycho": {
+   "file": "unicorn_psycho.png",
+   "w": 119,
+   "h": 186
+  }
+ },
+ "pig": {
+  "head": {
+   "file": "pig_head.png",
+   "w": 116,
+   "h": 107
+  },
+  "sweet": {
+   "file": "pig_sweet.png",
+   "w": 133,
+   "h": 179
+  },
+  "psycho": {
+   "file": "pig_psycho.png",
+   "w": 133,
+   "h": 183
+  }
+ },
+ "duck": {
+  "head": {
+   "file": "duck_head.png",
+   "w": 96,
+   "h": 104
+  },
+  "sweet": {
+   "file": "duck_sweet.png",
+   "w": 118,
+   "h": 164
+  },
+  "psycho": {
+   "file": "duck_psycho.png",
+   "w": 143,
+   "h": 170
+  }
+ },
+ "bunny": {
+  "head": {
+   "file": "bunny_head.png",
+   "w": 104,
+   "h": 118
+  },
+  "sweet": {
+   "file": "bunny_sweet.png",
+   "w": 119,
+   "h": 184
+  },
+  "psycho": {
+   "file": "bunny_psycho.png",
+   "w": 106,
+   "h": 191
+  }
+ },
+ "robot": {
+  "head": {
+   "file": "robot_head.png",
+   "w": 94,
+   "h": 90
+  },
+  "sweet": {
+   "file": "robot_sweet.png",
+   "w": 111,
+   "h": 157
+  },
+  "psycho": {
+   "file": "robot_psycho.png",
+   "w": 120,
+   "h": 168
+  }
+ },
+ "cat": {
+  "head": {
+   "file": "cat_head.png",
+   "w": 115,
+   "h": 111
+  },
+  "sweet": {
+   "file": "cat_sweet.png",
+   "w": 129,
+   "h": 158
+  },
+  "psycho": {
+   "file": "cat_psycho.png",
+   "w": 142,
+   "h": 149
+  }
+ },
+ "bear": {
+  "head": {
+   "file": "bear_head.png",
+   "w": 101,
+   "h": 121
+  },
+  "sweet": {
+   "file": "bear_sweet.png",
+   "w": 137,
+   "h": 181
+  },
+  "psycho": {
+   "file": "bear_psycho.png",
+   "w": 154,
+   "h": 180
+  }
+ }
+}

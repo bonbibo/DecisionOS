@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2b2233">
+<title>Luupie — Cute Meets Crazy</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧸%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="world"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-title">Luupie Fabrikası</div>
+      <div class="hud-pills">
+        <div class="pill coin"><span class="ic">🪙</span><span id="hud-coins">0</span></div>
+        <div class="pill prod"><span class="ic">🧸</span><span id="hud-products">0</span></div>
+        <div class="pill lvl"><span class="ic">⭐</span><span id="hud-level">1</span></div>
+      </div>
+    </div>
+    <div class="hud-xp"><div id="hud-xpbar"></div></div>
+  </div>
+
+  <!-- alt dock -->
+  <div id="dock">
+    <button class="dock-btn" id="btn-cafeteria"><span>🍰</span>Yemekhane</button>
+    <button class="dock-btn" id="btn-album"><span>📔</span>Albüm</button>
+    <button class="dock-btn" id="btn-league"><span>🏆</span>Lig</button>
+    <button class="dock-btn" id="btn-adopt"><span>➕</span>Yeni Luupie</button>
+  </div>
+
+  <!-- konveyör arıza rozeti -->
+  <button id="repair-badge" class="hidden">🔧<span>TAMİR ET</span></button>
+
+  <!-- karakter etkileşim balonu -->
+  <div id="char-popup" class="hidden">
+    <div class="cp-name" id="cp-name">Luupie</div>
+    <div class="cp-lovebar"><div id="cp-love"></div></div>
+    <div class="cp-stats" id="cp-stats"></div>
+    <div class="cp-actions">
+      <button id="cp-action-main">Sev ❤️</button>
+      <button id="cp-close">Kapat</button>
+    </div>
+  </div>
+
+  <!-- mini oyun overlay -->
+  <div id="overlay" class="hidden">
+    <div class="og-banner"><span id="og-title">MİNİ OYUN</span></div>
+    <div id="og-body"></div>
+  </div>
+
+  <!-- panel (albüm / lig / dükkan / hoşgeldin) -->
+  <div id="panel" class="hidden">
+    <div class="panel-card">
+      <div class="panel-title" id="panel-title"></div>
+      <div class="panel-body" id="panel-body"></div>
+      <button class="panel-close" id="panel-close">Kapat</button>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/input.js"></script>
+<script src="js/factory.js"></script>
+<script src="js/ponchiq.js"></script>
+<script src="js/minigames.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

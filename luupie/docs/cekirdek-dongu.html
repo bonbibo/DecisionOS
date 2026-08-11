@@ -1,0 +1,615 @@
+<title>Luupie — Çekirdek Üretim Döngüsü</title>
+
+<style>
+  /* ---------- Tokenlar: açık tema temel, iki karanlık durum ayrıca ---------- */
+  :root {
+    --ground:      #f5eee7;
+    --surface:     #fffbf6;
+    --surface-2:   #ebdfd2;
+    --ink:         #2b2027;
+    --ink-2:       #6b5a58;
+    --ink-3:       #9a877f;
+    --rule:        #dccfc0;
+    --rule-strong: #b9a691;
+    --accent:      #b9660f;
+    --accent-soft: #f3ddbf;
+    --flow:        #1c7365;
+    --flow-soft:   #d3e8e2;
+    --jam:         #b8342a;
+    --jam-soft:    #f5d9d5;
+    --psycho:      #7a3ba3;
+
+    --f-display: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    --f-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --col: 68ch;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #1c151d;
+      --surface:     #271e28;
+      --surface-2:   #322535;
+      --ink:         #f3e7dc;
+      --ink-2:       #bfaba1;
+      --ink-3:       #8b7770;
+      --rule:        #443244;
+      --rule-strong: #614a60;
+      --accent:      #eb9840;
+      --accent-soft: #46331f;
+      --flow:        #46b8a0;
+      --flow-soft:   #1e3f3a;
+      --jam:         #e5695d;
+      --jam-soft:    #45211d;
+      --psycho:      #bb82e3;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #1c151d;
+    --surface:     #271e28;
+    --surface-2:   #322535;
+    --ink:         #f3e7dc;
+    --ink-2:       #bfaba1;
+    --ink-3:       #8b7770;
+    --rule:        #443244;
+    --rule-strong: #614a60;
+    --accent:      #eb9840;
+    --accent-soft: #46331f;
+    --flow:        #46b8a0;
+    --flow-soft:   #1e3f3a;
+    --jam:         #e5695d;
+    --jam-soft:    #45211d;
+    --psycho:      #bb82e3;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 20px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* ---------- Başlık ---------- */
+  .masthead {
+    border-bottom: 3px solid var(--ink);
+    padding: 56px 0 20px;
+    margin-bottom: 44px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 6.4vw, 58px);
+    line-height: 1.03;
+    letter-spacing: -.035em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: clamp(16px, 2.1vw, 19px);
+    color: var(--ink-2);
+    max-width: var(--col);
+    margin: 0;
+  }
+
+  /* ---------- Bölümler ---------- */
+  section { margin-bottom: 60px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 8px;
+    margin-bottom: 22px;
+  }
+  .sec-num {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(21px, 3.2vw, 27px);
+    letter-spacing: -.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -.01em;
+    margin: 30px 0 8px;
+  }
+  p { max-width: var(--col); margin: 0 0 16px; }
+  ul, ol { max-width: var(--col); margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 7px; }
+  strong { font-weight: 700; }
+  em { font-style: normal; color: var(--accent); font-weight: 600; }
+  code {
+    font-family: var(--f-mono);
+    font-size: .87em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    color: var(--ink);
+  }
+
+  /* ---------- Kontrol paneli blokları (endüstriyel: köşesiz) ---------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--rule-strong);
+    padding: 18px 20px;
+    margin: 0 0 18px;
+  }
+  .panel.is-jam { border-top-color: var(--jam); }
+  .panel.is-flow { border-top-color: var(--flow); }
+  .panel.is-accent { border-top-color: var(--accent); }
+  .panel-label {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 8px;
+  }
+  .panel p:last-child, .panel ul:last-child, .panel ol:last-child { margin-bottom: 0; }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  /* ---------- Tablolar ---------- */
+  .table-scroll { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--rule); }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 520px;
+    background: var(--surface);
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num {
+    font-family: var(--f-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  td.key { font-weight: 600; white-space: nowrap; }
+
+  /* ---------- Zincir diyagramı ---------- */
+  .figure { margin: 0 0 18px; }
+  .figure-scroll {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 20px 16px;
+  }
+  .figure svg { display: block; min-width: 660px; width: 100%; height: auto; }
+  figcaption {
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-top: 10px;
+    max-width: var(--col);
+  }
+
+  /* ---------- Seans zaman çizelgesi ---------- */
+  .beat { display: flex; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+  .beat:last-child { border-bottom: none; }
+  .beat-time {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    width: 62px;
+    flex: none;
+    padding-top: 2px;
+  }
+  .beat-body { flex: 1; }
+  .beat-body b { display: block; font-size: 15px; }
+  .beat-body span { color: var(--ink-2); font-size: 14px; }
+
+  /* ---------- Faz kartları ---------- */
+  .phase { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; margin-bottom: 22px; }
+  .phase .tag {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .phase h3 { margin: 2px 0 6px; }
+
+  .files { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-2); line-height: 1.9; }
+  .files b { color: var(--ink); font-weight: 600; }
+
+  a { color: var(--accent); }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (max-width: 620px) {
+    .beat { flex-direction: column; gap: 2px; }
+    .beat-time { width: auto; }
+  }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Luupie · Tasarım Notu</p>
+  <h1>Çekirdek Üretim Döngüsü</h1>
+  <p class="standfirst">Fabrikayı bir sayaçtan gerçek bir simülasyona çeviren sistem: darboğazlı üretim zinciri. Mevcut mini oyunları da yük taşır hale getirir.</p>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>Teşhis: elimizde neden idle oyun yok</h2></div>
+
+  <p>Şu anki ekonomi tek satır. Her Ponchiq 20 saniyede bir <code>product</code> üretiyor, ürün başına 2 altın geliyor, psycho ise bunu 2'ye katlıyor. Bu bir <strong>sayaç</strong>, simülasyon değil.</p>
+
+  <p>Eksik olan şey grafik ya da içerik değil — <em>karar</em>. İyi bir idle oyunda oyuncu her seansta “şu an elimdeki kaynağı nereye koyarsam çıktım artar?” sorusuna cevap verir. Bizde bu sorunun cevabı hep aynı: daha fazla Ponchiq al. Tek kaldıraç, tek yön, sıfır optimizasyon.</p>
+
+  <p>Bunun ikinci bir bedeli var: üç mini oyun ekonomiye <strong>bağlı değil</strong>. Tamir istasyonu rastgele bir zamanlayıcıyla açılıyor, yemekhane sevgi barını dolduruyor ama sevginin üretimle tek teması %25 eşiği. Mini oyunlar iyi çalışıyor; sorun onların bağlandığı bir sistemin olmaması.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>Öneri: darboğazlı üretim zinciri</h2></div>
+
+  <p>Oyuncak tek parçada değil, <strong>dört aşamada</strong> üretilir. Her aşama bir istasyondur; istasyonlar arasında tampon (ara stok) vardır. Bir istasyon ne kadar hızlıysa değil, <strong>zincirin en yavaş halkası ne kadar hızlıysa</strong> fabrika o kadar üretir.</p>
+
+  <p>Bu tek kural bütün oyunu doğurur: tampolar dolar ve boşalır, oyuncu ekrana bakıp darboğazı gözle görür, altınını oraya harcar — ve darboğaz bir sonraki istasyona kayar. Klasik idle optimizasyonu, ama izometrik fabrikada <em>gözle okunabilir</em> halde.</p>
+
+  <figure class="figure">
+    <div class="figure-scroll">
+      <svg viewBox="0 0 920 290" role="img" aria-label="Dört istasyonlu üretim zinciri: Pamuk Presi, Dikiş Tezgahı, Boya ve Süsleme, Paketleme. Boya istasyonu darboğaz olduğu için öncesindeki tampon dolu, sonrasındaki tampon boş.">
+        <defs>
+          <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+            <path d="M0,0 L7,3.2 L0,6.4 z" fill="var(--rule-strong)"/>
+          </marker>
+        </defs>
+
+        <!-- İSTASYON 1 -->
+        <rect x="8" y="66" width="176" height="112" fill="var(--surface-2)" stroke="var(--rule-strong)" stroke-width="1.5"/>
+        <rect x="8" y="66" width="176" height="5" fill="var(--flow)"/>
+        <text x="24" y="96" font-family="var(--f-display)" font-size="15" font-weight="700" fill="var(--ink)">Pamuk Presi</text>
+        <text x="24" y="118" font-family="var(--f-mono)" font-size="12" fill="var(--ink-2)">6.0 sn / parça</text>
+        <text x="24" y="140" font-family="var(--f-mono)" font-size="12" fill="var(--flow)">● Şefo · sevgi 88</text>
+        <text x="24" y="162" font-family="var(--f-mono)" font-size="11" fill="var(--ink-3)">çıktı: dolgu</text>
+
+        <!-- Tampon 1: normal -->
+        <g>
+          <rect x="204" y="104" width="14" height="14" fill="var(--flow)"/>
+          <rect x="204" y="122" width="14" height="14" fill="var(--flow)"/>
+          <rect x="204" y="140" width="14" height="14" fill="none" stroke="var(--rule-strong)"/>
+          <rect x="204" y="158" width="14" height="14" fill="none" stroke="var(--rule-strong)"/>
+          <text x="211" y="192" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">2/8</text>
+        </g>
+        <line x1="188" y1="132" x2="202" y2="132" stroke="var(--rule-strong)" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="222" y1="132" x2="238" y2="132" stroke="var(--rule-strong)" stroke-width="1.5" marker-end="url(#ar)"/>
+
+        <!-- İSTASYON 2 -->
+        <rect x="242" y="66" width="176" height="112" fill="var(--surface-2)" stroke="var(--rule-strong)" stroke-width="1.5"/>
+        <rect x="242" y="66" width="176" height="5" fill="var(--flow)"/>
+        <text x="258" y="96" font-family="var(--f-display)" font-size="15" font-weight="700" fill="var(--ink)">Dikiş Tezgahı</text>
+        <text x="258" y="118" font-family="var(--f-mono)" font-size="12" fill="var(--ink-2)">7.5 sn / parça</text>
+        <text x="258" y="140" font-family="var(--f-mono)" font-size="12" fill="var(--flow)">● Pofu · sevgi 61</text>
+        <text x="258" y="162" font-family="var(--f-mono)" font-size="11" fill="var(--ink-3)">çıktı: gövde</text>
+
+        <!-- Tampon 2: DOLU -->
+        <g>
+          <rect x="438" y="104" width="14" height="14" fill="var(--jam)"/>
+          <rect x="438" y="122" width="14" height="14" fill="var(--jam)"/>
+          <rect x="438" y="140" width="14" height="14" fill="var(--jam)"/>
+          <rect x="438" y="158" width="14" height="14" fill="var(--jam)"/>
+          <text x="445" y="192" font-family="var(--f-mono)" font-size="10" font-weight="700" fill="var(--jam)" text-anchor="middle">8/8</text>
+          <text x="445" y="52" font-family="var(--f-mono)" font-size="10" fill="var(--jam)" text-anchor="middle">YIĞILMA</text>
+        </g>
+        <line x1="422" y1="132" x2="436" y2="132" stroke="var(--rule-strong)" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="456" y1="132" x2="472" y2="132" stroke="var(--rule-strong)" stroke-width="1.5" marker-end="url(#ar)"/>
+
+        <!-- İSTASYON 3: DARBOĞAZ -->
+        <rect x="476" y="66" width="176" height="112" fill="var(--jam-soft)" stroke="var(--jam)" stroke-width="2"/>
+        <rect x="476" y="66" width="176" height="5" fill="var(--jam)"/>
+        <text x="492" y="96" font-family="var(--f-display)" font-size="15" font-weight="700" fill="var(--ink)">Boya &amp; Süsleme</text>
+        <text x="492" y="118" font-family="var(--f-mono)" font-size="12" font-weight="700" fill="var(--jam)">9.0 sn / parça</text>
+        <text x="492" y="140" font-family="var(--f-mono)" font-size="12" fill="var(--ink-3)">○ işçi yok · ×0.30</text>
+        <text x="492" y="162" font-family="var(--f-mono)" font-size="11" fill="var(--ink-3)">çıktı: boyalı</text>
+        <text x="564" y="42" font-family="var(--f-mono)" font-size="11" font-weight="700" fill="var(--jam)" text-anchor="middle">▼ DARBOĞAZ</text>
+
+        <!-- Tampon 3: AÇ -->
+        <g>
+          <rect x="672" y="104" width="14" height="14" fill="none" stroke="var(--rule-strong)"/>
+          <rect x="672" y="122" width="14" height="14" fill="none" stroke="var(--rule-strong)"/>
+          <rect x="672" y="140" width="14" height="14" fill="none" stroke="var(--rule-strong)"/>
+          <rect x="672" y="158" width="14" height="14" fill="none" stroke="var(--rule-strong)"/>
+          <text x="679" y="192" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">0/8</text>
+          <text x="679" y="52" font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">AÇ KALIYOR</text>
+        </g>
+        <line x1="656" y1="132" x2="670" y2="132" stroke="var(--rule-strong)" stroke-width="1.5" marker-end="url(#ar)"/>
+        <line x1="690" y1="132" x2="706" y2="132" stroke="var(--rule-strong)" stroke-width="1.5" marker-end="url(#ar)"/>
+
+        <!-- İSTASYON 4 -->
+        <rect x="710" y="66" width="176" height="112" fill="var(--surface-2)" stroke="var(--rule-strong)" stroke-width="1.5"/>
+        <rect x="710" y="66" width="176" height="5" fill="var(--accent)"/>
+        <text x="726" y="96" font-family="var(--f-display)" font-size="15" font-weight="700" fill="var(--ink)">Paketleme</text>
+        <text x="726" y="118" font-family="var(--f-mono)" font-size="12" fill="var(--ink-2)">5.0 sn / parça</text>
+        <text x="726" y="140" font-family="var(--f-mono)" font-size="12" fill="var(--flow)">● Vako · sevgi 74</text>
+        <text x="726" y="162" font-family="var(--f-mono)" font-size="11" fill="var(--accent)">çıktı: 🧸 + altın</text>
+
+        <!-- Alt açıklama şeridi -->
+        <line x1="8" y1="228" x2="886" y2="228" stroke="var(--rule)" stroke-width="1"/>
+        <text x="8" y="252" font-family="var(--f-mono)" font-size="11.5" fill="var(--ink-2)">Fabrika hızı = en yavaş istasyon = 9.0 sn/parça → saatte 400 oyuncak</text>
+        <text x="8" y="272" font-family="var(--f-mono)" font-size="11.5" fill="var(--accent)">Boya'ya işçi ata → 9.0 sn ×0.30 yerine ×1.15 → darboğaz Dikiş'e kayar</text>
+      </svg>
+    </div>
+    <figcaption>Darboğazın iki imzası vardır ve ikisi de ekranda görünür: öncesinde tampon dolup taşar, sonrasında istasyon aç kalır. Oyuncunun okuması gereken tek şey bu.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>Ponchiq'ler artık işçi</h2></div>
+
+  <p>Bugün karakterler rastgele dolaşıyor ve havadan ürün üretiyor. Bunun yerine her Ponchiq bir istasyona <strong>atanır</strong>, oraya yürür ve orada çalışır. Amaçsız gezinme biter; izometrik sahne okunabilir hale gelir — kim nerede çalışıyor, hangi tezgah boş, bir bakışta görülür.</p>
+
+  <p>Bir istasyonun hız çarpanı şu üç şeyin çarpımıdır:</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Etken</th><th class="num">Çarpan</th><th>Not</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">İşçi yok</td><td class="num">×0.30</td><td>İstasyon otomatik ama cılız çalışır — durmaz, sürünür</td></tr>
+        <tr><td class="key">Sevgi düzeyi</td><td class="num">×0.55 – ×1.30</td><td><code>0.55 + sevgi/100 × 0.75</code> — sürekli, eşiksiz</td></tr>
+        <tr><td class="key">Tür yatkınlığı</td><td class="num">×1.35</td><td>Şefo mutfakta, Cıvata boyada, Vako pakette</td></tr>
+        <tr><td class="key">Psycho</td><td class="num">×2.00</td><td>Ama üretiminin %18'i <strong>hatalı</strong> çıkar</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Sevginin sürekli çarpana dönüşmesi tek başına büyük bir kazanım: artık okşamak ve beslemek “%25 eşiğine düşmesin” diye yapılan bir bakım işi değil, doğrudan üretim hızı. <strong>Yemekhane mini oyunu böylece ekonominin içine girer.</strong></p>
+
+  <h3>Tür yatkınlığı koleksiyonu anlamlandırır</h3>
+  <p>Dokuz türün her biri bir istasyonda güçlüdür. Böylece “yeni Luupie sahiplen” kararı estetik olmaktan çıkıp hat kurma kararına döner: boyada zayıfsam Cıvata veya Uni almalıyım.</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>İstasyon</th><th>Yatkın türler</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">Pamuk Presi</td><td>Şefo (domuz), Ponpon (ayı)</td></tr>
+        <tr><td class="key">Dikiş Tezgahı</td><td>Pofu (tavşan), Mırmır (kedi)</td></tr>
+        <tr><td class="key">Boya &amp; Süsleme</td><td>Uni (tek boynuz), Çako (punk)</td></tr>
+        <tr><td class="key">Paketleme</td><td>Vako (ördek), Cıvata (robot)</td></tr>
+        <tr><td class="key">Serbest</td><td>Rako (kurt) — her istasyonda ×1.15, gece saatlerinde ×1.4</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>Psycho: kumar artık ölçülebilir</h2></div>
+
+  <p>Konsept dokümanındaki “Verimlilik Takası” fikri şu an sadece bir çarpan. Zincir bunu gerçek bir kumara çevirir:</p>
+
+  <div class="grid-2">
+    <div class="panel is-accent">
+      <p class="panel-label">Kazanç</p>
+      <p>Psycho işçi istasyonu <strong>2 kat</strong> hızlı çalıştırır. Darboğaz istasyonundaki bir psycho, tüm fabrikanın çıktısını neredeyse ikiye katlar.</p>
+    </div>
+    <div class="panel is-jam">
+      <p class="panel-label">Bedel</p>
+      <p>Ürettiğinin %18'i <strong>hatalı</strong> çıkar. Hatalılar zincirde ilerler ve <strong>Paketleme'yi tıkar</strong> — paketleme hızı yarıya iner, tıkanıklık temizlenene kadar.</p>
+    </div>
+  </div>
+
+  <p>Ve tıkanıklığı temizlemenin yolu <strong>Tamir İstasyonu mini oyunu</strong>. Böylece tamir, rastgele bir zamanlayıcıyla açılan bir yan aktivite olmaktan çıkar; oyuncunun kendi açgözlülüğünün sonucu olur. Konsept dokümanının “villain dışarıdan gelmez” fikrinin mekanik karşılığı tam olarak budur.</p>
+
+  <p>Oyuncunun üç seçeneği olur ve üçü de meşrudur: psycho'yu <em>zapt et</em> (Oyuncak Krizi mini oyunu — 2x biter, hata durur), <em>besle</em> (Yemekhane — sevgi yükselir, kendiliğinden Sweet'e döner), ya da <em>bırak çalışsın</em> ve tamir yükünü kabullen. Sonuncusu ileri oyuncunun stratejisidir.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2>Uzun yol: oyuncak modelleri</h2></div>
+
+  <p>Tek tip ürün, seviye 10'dan sonra sıkıcı olur. Fabrika aynı anda tek bir <strong>model</strong> üretir; model değiştirmek 45 saniyelik hat kurulumu ister. Bu, “şimdi mi geçeyim yoksa eldeki siparişi bitireyim mi?” kararını doğurur.</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Model</th><th class="num">Aşama süresi</th><th class="num">Değer</th><th class="num">Açılış</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">Pamuk Ayıcık</td><td class="num">×1.0</td><td class="num">3 🪙</td><td class="num">Başlangıç</td></tr>
+        <tr><td class="key">Peluş Tavşan</td><td class="num">×1.4</td><td class="num">6 🪙</td><td class="num">Sv 4</td></tr>
+        <tr><td class="key">Robot Figür</td><td class="num">×2.0</td><td class="num">14 🪙</td><td class="num">Sv 8</td></tr>
+        <tr><td class="key">Tek Boynuz</td><td class="num">×3.0</td><td class="num">40 🪙</td><td class="num">Sv 14</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Değer artışı süre artışından hızlı büyür, yani üst modeller her zaman daha kârlıdır — ama <strong>ancak hattınız onları besleyebiliyorsa</strong>. Tek Boynuz'a geçip zinciri çökertmek gerçek bir hata olabilmelidir; oyuncu geri dönebilmelidir.</p>
+
+  <h3>Siparişler seansa hedef verir</h3>
+  <p>Yaklaşık 18 dakikada bir sipariş düşer: <em>“20 × Peluş Tavşan → 850 🪙 + 3 yıldız tozu”</em>, 2 saat geçerli. Sipariş, sayı büyütmekten ibaret olan döngüye bitiş çizgisi koyar ve haftalık lige doğrudan hacim yazar.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">06</span><h2>Offline simülasyon</h2></div>
+
+  <p>Şu an offline birikim düz çarpım: <code>süre / 20sn × 0.6</code>. Zincirle birlikte bu, gerçek bir <strong>ileri sarım</strong> olur — 30 saniyelik adımlarla, tampon ve darboğaz kurallarına uyarak, 4 saat tavanla.</p>
+
+  <p>Getirisi sadece doğruluk değil; <strong>dönüş ekranı artık bir şey anlatır</strong>:</p>
+
+  <div class="panel is-jam">
+    <p class="panel-label">Tekrar hoş geldin — 3 sa 40 dk</p>
+    <p><strong>612 oyuncak · 3.670 🪙</strong><br>
+    ⚠ Boya &amp; Süsleme <strong>2 sa 10 dk tıkalı kaldı</strong> — Uni psycho'ya döndü, hatalılar paketlemeyi kilitledi.<br>
+    Tampon dolduğu için Dikiş Tezgahı da 1 sa 20 dk boşta bekledi.</p>
+  </div>
+
+  <p>Bu ekran oyuncuya <strong>ne yapacağını söyler</strong>. “Kaybettin” demez — potansiyelin ne kadarını topladığını gösterir ve düzeltmesi için bir sonraki seansa somut bir iş verir. Konsept dokümanındaki “ceza değil, kaçan fırsat” felsefesiyle birebir uyumlu.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2>Bir seans neye benzer</h2></div>
+
+  <p>Doküman 40 saniye ile 5 dakika arası seanslar istiyor. Zincir bunu doğal olarak üretir:</p>
+
+  <div class="panel">
+    <div class="beat">
+      <div class="beat-time">0:00</div>
+      <div class="beat-body"><b>Offline raporu</b><span>Ne kadar üretildi, hangi istasyon tıkandı. Topla.</span></div>
+    </div>
+    <div class="beat">
+      <div class="beat-time">0:08</div>
+      <div class="beat-body"><b>Hattı oku</b><span>Kırmızı yanan istasyon ve dolu tampon nerede? Tek bakış.</span></div>
+    </div>
+    <div class="beat">
+      <div class="beat-time">0:15</div>
+      <div class="beat-body"><b>Sorunu çöz</b><span>Tıkanıklık varsa Tamir, sevgisi düşük işçi varsa Yemekhane, psycho varsa Oyuncak Krizi. <strong>Mini oyunlar buraya oturur.</strong></span></div>
+    </div>
+    <div class="beat">
+      <div class="beat-time">1:30</div>
+      <div class="beat-body"><b>Darboğazı yükselt</b><span>Biriken altını en yavaş istasyona harca. Darboğaz kayar.</span></div>
+    </div>
+    <div class="beat">
+      <div class="beat-time">1:50</div>
+      <div class="beat-body"><b>Ayarla</b><span>İşçi yerlerini değiştir, sipariş kabul et, belki modeli yükselt.</span></div>
+    </div>
+    <div class="beat">
+      <div class="beat-time">2:20</div>
+      <div class="beat-body"><b>Çık</b><span>Fabrika arkada çalışmaya devam eder.</span></div>
+    </div>
+  </div>
+
+  <p>Kritik nokta: <strong>3. adım zorunlu değil ama kârlı</strong>. Casual oyuncu sadece yükseltme yapıp çıkar; hırslı oyuncu üç mini oyunu da oynayıp aynı süreden iki katı verim alır. Dokümandaki “beceri tavanı” tam olarak burada oluşur.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Prestij: Fabrika Devri</h2></div>
+
+  <p>Mezuniyet sistemi zaten var — Ponchiq'ler 48 saatte bir çocuk tarafından sahipleniliyor ve albüme giriyor. Bunun üstüne uzun vadeli sıfırlama gelir: seviye 20'de <strong>Fabrika Devri</strong> açılır. İstasyon seviyeleri ve altın sıfırlanır; karşılığında her mezun Ponchiq bir <strong>Mezun Yıldızı</strong>'na dönüşür ve her yıldız kalıcı <strong>+%4 global hız</strong> verir.</p>
+
+  <p>Böylece albüm dekoratif bir koleksiyon olmaktan çıkıp prestij para birimi olur — ve “iyi bak, mezun et, tekrarla” döngüsü uzun vadede de ödüllendirilir.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">09</span><h2>İlk sayısal ayar</h2></div>
+
+  <p>Denemeye başlamak için somut değerler. Hepsi <code>js/data.js</code> içindeki <code>CONFIG</code>'e girer, hiçbiri koda gömülmez:</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Parametre</th><th class="num">Değer</th><th>Gerekçe</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">İstasyon temel süreleri</td><td class="num">6.0 / 7.5 / 9.0 / 5.0 sn</td><td>Boya kasten başlangıç darboğazı — ilk ders orada verilir</td></tr>
+        <tr><td class="key">Yükseltme etkisi</td><td class="num">hız ×1.18 / seviye</td><td>4 seviyede yaklaşık iki kat; ilerleme hissedilir</td></tr>
+        <tr><td class="key">Yükseltme maliyeti</td><td class="num">120 × 1.60<sup>S−1</sup></td><td>Maliyet hızdan hızlı büyür → sonsuz tek istasyon yatırımı engellenir</td></tr>
+        <tr><td class="key">Tampon kapasitesi</td><td class="num">15 + 5 × seviye</td><td>Kısa devamsızlıkları yutar, uzun ihmali cezalandırır</td></tr>
+        <tr><td class="key">Hata oranı (psycho)</td><td class="num">%18</td><td>Sürekli tamir gerektirmeyecek, ama görmezden gelinemeyecek kadar</td></tr>
+        <tr><td class="key">Tıkanma cezası</td><td class="num">paketleme ×0.5</td><td>Öldürücü değil; “şu an ilgilen” sinyali</td></tr>
+        <tr><td class="key">Offline verim / tavan</td><td class="num">%60 · 4 saat</td><td>Mevcut değerler korunur; sadece zincire uyarlanır</td></tr>
+        <tr><td class="key">Model geçiş süresi</td><td class="num">45 sn</td><td>Kararı gerçek yapacak kadar, sinir bozacak kadar değil</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Bu sayılar başlangıç noktası; asıl ayar oynayarak yapılır. Önemli olan hepsinin tek yerde ve veri olarak durması.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">10</span><h2>Uygulama planı</h2></div>
+
+  <p>Üç fazda, her fazın sonunda oyun oynanabilir kalır.</p>
+
+  <div class="phase">
+    <span class="tag">Faz 1 · zorunlu</span>
+    <h3>Zincir çalışsın</h3>
+    <p>Dört istasyon, tamponlar, darboğaz kuralı, işçi atama, yükseltme paneli ve zincire dayalı offline simülasyon. Bu faz tek başına oyunu idle oyuna çevirir. Yeni dosya: <code>js/production.js</code> — hem canlı tick hem offline ileri sarım aynı fonksiyonu kullanır, böylece iki ekonomi arasında sapma olamaz.</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Faz 2 · derinlik</span>
+    <h3>Mini oyunları bağla</h3>
+    <p>Sevgi → sürekli verim çarpanı. Psycho → hatalı ürün → paketleme tıkanması → Tamir mini oyunu. Tür yatkınlıkları. Bu fazdan sonra üç mini oyunun da ekonomik bir sebebi olur.</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Faz 3 · meta</span>
+    <h3>Uzun yol</h3>
+    <p>Oyuncak modelleri ve hat kurulumu, siparişler, Fabrika Devri prestiji, ligin sipariş hacmiyle beslenmesi.</p>
+  </div>
+
+  <h3>Dokunulacak dosyalar</h3>
+  <div class="panel">
+    <p class="files">
+      <b>js/production.js</b> — yeni; zincir simülasyonu (canlı + offline ortak)<br>
+      <b>js/data.js</b> — istasyon, model, yatkınlık tanımları ve tüm sayısal ayar<br>
+      <b>js/ponchiq.js</b> — <code>produceTimer</code> yerine istasyon ataması, hedefe yürüme, çalışma animasyonu<br>
+      <b>js/factory.js</b> — istasyonları, tamponları ve tıkanma parıltısını izometrik sahneye çiz<br>
+      <b>js/ui.js</b> — istasyon paneli: yükselt, işçi ata, model seç<br>
+      <b>js/game.js</b> — durum şeması, kayıt göçü, offline raporu<br>
+      <b>js/minigames.js</b> — tamir artık tıkanmayı temizler, yemekhane sevgiyi hedefe yönlendirir<br>
+      <b>tests/</b> — zincir matematiği için birim testler: darboğaz doğru mu, tampon taşınca üst istasyon duruyor mu, offline ileri sarım canlı simülasyonla aynı sonucu veriyor mu
+    </p>
+  </div>
+
+  <div class="panel is-accent">
+    <p class="panel-label">Kayıt uyumluluğu</p>
+    <p>Mevcut <code>luupie_save_v1</code> kayıtlarında istasyon yok. Yükleme sırasında varsayılan istasyon seti oluşturulur ve eldeki Ponchiq'ler sırayla atanır — kimse ilerlemesini kaybetmez. Kayıt anahtarı <code>v2</code>'ye çıkar.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">11</span><h2>Kasten dışarıda bıraktıklarım</h2></div>
+
+  <p>Bir idle oyuna eklenebilecek her şeyi eklemek, oyunu ilk günden yönetilemez yapar. Şunları bilerek almıyorum:</p>
+
+  <ul>
+    <li><strong>Birden fazla oda / kat.</strong> Tek oda, tek zincir. Dikey ekranda ikinci bir kat okunabilirliği öldürür. Genişleme gerekirse istasyon sayısı 4'ten 6'ya çıkar, oda sayısı değil.</li>
+    <li><strong>Hammadde satın alma ekonomisi.</strong> Pamuk sonsuz. İkinci bir kaynak para birimi, karar sayısını artırmadan tabloyu karmaşıklaştırır.</li>
+    <li><strong>İşçi seviye/beceri ağacı.</strong> Sevgi + tür yatkınlığı zaten iki boyut. Üçüncüsü Ponchiq'leri tablo satırına çevirir, karakter olmaktan çıkarır.</li>
+    <li><strong>Psycho Kargo (sosyal katman).</strong> Dokümanda var ve iyi bir fikir, ama sunucu ister. Tek oyunculu çekirdek oturmadan sosyal katman inşa etmek erken.</li>
+  </ul>
+
+  <p>Bunların hepsi Faz 3 sonrası tekrar masaya gelebilir — ama çekirdek döngü kanıtlandıktan sonra.</p>
+</section>
+
+</div>
