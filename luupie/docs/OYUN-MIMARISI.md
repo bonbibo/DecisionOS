@@ -386,7 +386,8 @@ zenginleştirir, ayakta tutmaz.
 | Ara oyun · Yemekhane | Bağlanma kuralları **burada §4**; mutfak zinciri ve TM mekanikleri `KONSEPT-02-RESTORAN.md` |
 | Yan oyun · Genişleme | `LUUPIE-SPEC.md` §14 + bu doküman §6 |
 | Yan oyun · Battle | Bağlanma kuralları **burada §5**; combat spec'i Faz 4'te |
-| Üretim planı | `URETIM-PLANI.md` — faz haritası bu mimariye göre yazılmıştır |
+| Üretim planı (faz/efor) | `URETIM-PLANI.md` — faz haritası bu mimariye göre yazılmıştır |
+| **İşleyiş planı (davranış)** | `ISLEYIS-PLANI.md` — A–J blokları, her birinin kabul testi |
 | Test kayıtları | `TEST-RAPORU-01/02/03.md` |
 
 ---

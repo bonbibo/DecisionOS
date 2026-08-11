@@ -6,6 +6,10 @@ listesi ve karar kapıları.
 Efor **adam-hafta** cinsinden verilir; takvim ekip büyüklüğüne göre değişir.
 Referans takvim **1 geliştirici + 1 sanatçı + yarım zamanlı tasarım** varsayar.
 
+> 🔁 **Aynı işin akışa göre kesilmiş hâli:** `ISLEYIS-PLANI.md` — hangi
+> davranış ne zaman gerçek olur, çalıştığı nasıl anlaşılır, neden o sırada.
+> Bu doküman *ne kadar sürer*, o doküman *ne çalışır* sorusunu yanıtlar.
+
 > ⚙️ **Motor kararı verildi: oyun baştan sona Unity'de yazılacak.** Web
 > prototipi ürün değil; §9'da tanımlanan üç işi görür ve orada kalır.
 > Ara geçiş, yeniden yazım veya çift kod tabanı **yoktur**.
