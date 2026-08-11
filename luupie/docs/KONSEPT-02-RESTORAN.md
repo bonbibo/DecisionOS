@@ -8,6 +8,10 @@
 > (Tamirhane) taşındı. Aşağıdaki mutfak zinciri, kontrol şeması ve TM
 > mekanikleri aynen kullanılır; bölüm/yıldız ilerlemesi ve restoran meta
 > katmanı kullanılmaz.
+>
+> **Bağlanma kuralları da orada:** 3 🥕 malzeme → +25 moral, tavan 100,
+> zamanlayıcı cooldown yok (kapı malzeme deposu), ayrı hız bonusu yok.
+> Çelişki hâlinde `OYUN-MIMARISI.md` §4 üstün gelir.
 
 
 Bu doküman `LUUPIE-SPEC.md`'nin çekirdek döngü bölümünü değiştirir. Ekran

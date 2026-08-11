@@ -93,13 +93,18 @@ değil.
 
 ## 3. Kaynaklar ve depo kuralı
 
-Üç kaynak, her biri Şehir'de bir bina:
+Beş kaynak, her biri Şehir'de bir bina:
 
-| Kaynak | Bina | Başlangıç üretim | Periyot | Maks seviye |
-|---|---|---|---|---|
-| 🧶 Wool | Yün Çiftliği | 45 | 40 sn | 50 |
-| 🛢 Oil | Yağhane | 35 | 40 sn | 50 |
-| ⛏ Mine | Maden | 28 | 40 sn | 50 |
+| Kaynak | Bina | Başlangıç üretim | Periyot | Maks seviye | Tüketicisi |
+|---|---|---|---|---|---|
+| 🧵 Pamuk | Pamuk Tarlası | 45 | 40 sn | 50 | Hat |
+| 🪡 İplik | İplikhane | 35 | 40 sn | 50 | Hat |
+| ⚙️ Parça | Parça Atölyesi | 28 | 40 sn | 50 | Hat |
+| 🥕 **Malzeme** | **Mutfak Serası** | 30 | 1 saat | 50 | **Yemekhane + kantin rafı** |
+| ⚙️✨ **Nadir parça** | **Hurdalık** | 1 | 6 saat | 5 | **İstasyon Sv. 10+** |
+
+Nadir parça ayrıca **Battle**'dan çok daha hızlı gelir; Hurdalık onun
+yavaş ama garantili alternatifidir (`OYUN-MIMARISI.md` §5).
 
 **Üç kural:**
 
@@ -113,12 +118,12 @@ kilitlenir. **Sevkiyat, hattı açan zorunlu eylemdir.**
 
 ### İstasyon girdi maliyeti (L1 oyuncak başına)
 
-| İstasyon | Wool | Oil | Mine |
+| İstasyon | Pamuk | İplik | Parça |
 |---|---|---|---|
-| Press | 3 | 1 | — |
-| Stitch | 2 | — | 1 |
-| Paint | — | 2 | 2 |
-| Pack | 1 | 1 | 1 |
+| Teşhis (Press) | 3 | 1 | — |
+| Sökme (Stitch) | 2 | — | 1 |
+| Onarım (Paint) | — | 2 | 2 |
+| Cila (Pack) | 1 | 1 | 1 |
 
 Kaynağı biten istasyon **aç kalır** — mevcut "aç kalma" görsel dili artık
 gerçek bir sebebe bağlanır.
@@ -253,11 +258,38 @@ engeller.
 | Sistem | Kural |
 |---|---|
 | Nüfus | Maksimum 10 |
-| Sevgi | Zamanla düşer (~%8/saat); verim çarpanına doğrudan girer |
+| Sevgi | **Üretimin işletme gideri** — aşağıdaki tabloya göre düşer |
 | Psycho | Sevgi %25 altında dönüşür: ×2 hız, %18 hatalı ürün |
 | Psycho'dan çıkış | Besle (Yemekhane) · Zapt et (Oyuncak Krizi) · bırak çalışsın |
 | Mezuniyet | 48 saat sonra bir çocuk sahiplenir → Mezunlar Albümü + bonus |
 | Yatkınlık | §2'deki tabloya göre ×1.35 |
+
+### Sevgi ekonomisi
+
+Sevgi tek hız kanalıdır — ikinci bir "moral buff"ı **yoktur**. Ayrıntılı
+gerekçe `OYUN-MIMARISI.md` §4.
+
+**Düşüş:**
+
+| Sebep | Hız |
+|---|---|
+| Hatta çalışmak | −6 / saat |
+| Boşta beklemek | −2 / saat |
+| Battle'a girmek | −15 (anlık) |
+| Yemekhane'de aç bekletilmek | −1 / 10 sn |
+| Çevrimdışı | Aynı hız, **4 saat tavanla** |
+
+**Yükseliş — iki yol, iki verim:**
+
+| Yol | 🥕 Malzeme | Kazanç | Verim | Tavan |
+|---|---|---|---|---|
+| 🥫 Kantin rafı (pasif, otomatik) | 1 | +4 | 4 moral/🥕 | **60** |
+| 🍲 Yemekhane (aktif oynanır) | 3 | +25 | **8.3 moral/🥕** | 100 |
+
+Formülün nötr noktası tam olarak 60'tır (`0.55 + 60/100 × 0.75 = 1.00`).
+Yani **kantin rafı hattı ×1.00'de tutar; ×1.30'a kadar olan %30'luk bant
+yalnızca Yemekhane oynayarak açılır.** Zamanlayıcı cooldown yoktur; tek kapı
+malzeme deposudur.
 
 Boşta işçi varken hat yavaş çalışıyorsa oyun bunu **sahnede** göstermeli:
 işçi elleri cebinde dolaşır, üstünde `👤?` baloncuğu durur.
@@ -489,6 +521,16 @@ Test raporları ve revizyon listelerinden birleştirilmiş tek yığın.
 | 21 | Kaynak binaları Şehir sekmesine | Ekonomi V4 | ⚪ |
 | 22 | Koleksiyon atölyesi + görev genişlemesi | Ekonomi V4 | ⚪ |
 | 23 | Ses tasarımı | Rapor 03 | ⚪ |
+| 24 | **Sevgi ekonomisi**: düşüş hızları tablosu (§10) | Mimari §4 | 🔴 |
+| 25 | **Kantin rafı**: 1 🥕 → +4 sevgi, **tavan 60** | Mimari §4 | 🔴 |
+| 26 | 🥕 Malzeme kaynağı + depo kuralı | Mimari §4 | 🔴 |
+| 27 | Yemekhane: 3 🥕 → +25 sevgi, tavan 100; cooldown **kaldırılır** | Mimari §4 | 🟠 |
+| 28 | Bozuk oyuncak girdi modeli + 2 hasar tipi (hareketli darboğaz) | Mimari §3 | 🟠 |
+| 29 | Mutfak Serası + Hurdalık binaları | Mimari §6 | 🟡 |
+| 30 | İstasyon Sv. 10+ nadir parça kapısı | Mimari §5 | 🟡 |
+| 31 | Battle ekipman kilidi (onarılmış oyuncak rehin) | Mimari §5 | ⚪ |
+
+Faz ataması ve sıralama için `URETIM-PLANI.md`.
 
 ---
 
