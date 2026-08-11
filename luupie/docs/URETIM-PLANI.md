@@ -1,6 +1,7 @@
 # Luupie — Üretim Planı
 
 Konsept 02 (Restoran Vardiyası) için faz haritası, iş paketleri, sanat listesi
+ve karar kapıları.
 
 > 🏗 **Mimari güncellendi:** `OYUN-MIMARISI.md` üç katmanlı yapıyı tanımlıyor
 > (Tamirhane idle ana oyun · Yemekhane ara oyun · Battle + Genişleme yan oyun).
@@ -8,7 +9,6 @@ Konsept 02 (Restoran Vardiyası) için faz haritası, iş paketleri, sanat liste
 > Tamirhane idle çekirdeğidir**, restoran vardiyası değil. Yemekhane
 > Aşama 2'ye, Battle Aşama 4'e kayar (mimari §8).
 
-ve karar kapıları.
 
 Efor **adam-hafta** cinsinden verilir; takvim ekip büyüklüğüne göre değişir.
 Referans takvim **1 geliştirici + 1 sanatçı + yarım zamanlı tasarım** varsayar.
