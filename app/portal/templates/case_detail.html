@@ -1,0 +1,90 @@
+{% extends "_base.html" %}
+{% block title %}Vaka — DecisionOS{% endblock %}
+{% block content %}
+<p><a href="/portal">&larr; Vakalarım</a></p>
+<div id="case-header"><h1>Yükleniyor...</h1></div>
+<div id="timeline"></div>
+<div id="chat-box"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+var CASE_ID = {{ case_id | tojson }};
+
+(async function () {
+  if (!dosToken()) {
+    window.location.href = '/portal/login';
+    return;
+  }
+
+  try {
+    var timelineResp = await dosFetch('/web/case/' + encodeURIComponent(CASE_ID) + '/timeline');
+    if (!timelineResp.ok) {
+      document.getElementById('case-header').innerHTML = '<p class="status">Vaka bulunamadı.</p>';
+      return;
+    }
+    var timeline = await timelineResp.json();
+    renderHeader(timeline);
+    renderTimeline(timeline);
+    renderChat(timeline);
+  } catch (err) {
+    // dosFetch already redirected to /portal/login on 401.
+  }
+})();
+
+function renderHeader(timeline) {
+  var badge = timeline.escalated ? '<span class="badge escalated">bekleyen soru</span>' : '';
+  var reason = timeline.escalated && timeline.escalation_reason
+    ? '<p class="muted">' + dosEscape(timeline.escalation_reason) + '</p>' : '';
+  document.getElementById('case-header').innerHTML =
+    '<h1>' + dosEscape(timeline.state) + badge + '</h1>' + reason;
+}
+
+function renderTimeline(timeline) {
+  var rows = timeline.messages.map(function (m) {
+    return '<div class="card"><div class="muted">' + dosEscape(m.direction) + ' &middot; ' +
+      dosEscape(m.created_at) + '</div>' + dosEscape(m.content) + '</div>';
+  }).join('');
+  document.getElementById('timeline').innerHTML =
+    '<h2>Mesajlar</h2>' + (rows || '<p class="empty">Henüz mesaj yok.</p>');
+}
+
+function renderChat(timeline) {
+  var box = document.getElementById('chat-box');
+  if (timeline.state === 'close') {
+    box.innerHTML = '<p class="muted">Bu vaka kapandı, mesaj gönderilemez.</p>';
+    return;
+  }
+  box.innerHTML =
+    '<h2>Mesaj gönder</h2>' +
+    '<form id="chat-form"><textarea name="message" placeholder="Mesajınız" required></textarea>' +
+    '<button type="submit" class="primary">Gönder</button>' +
+    '<div id="chat-status" class="status"></div></form>';
+
+  document.getElementById('chat-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var form = e.target;
+    var status = document.getElementById('chat-status');
+    status.textContent = 'Gönderiliyor...';
+    status.className = 'status';
+    try {
+      var resp = await dosFetch('/web/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: form.message.value })
+      });
+      if (!resp.ok) {
+        status.textContent = 'Bir şeyler ters gitti, tekrar deneyin.';
+        status.className = 'status error';
+        return;
+      }
+      form.message.value = '';
+      status.textContent = '';
+      window.location.reload();
+    } catch (err) {
+      status.textContent = 'Bir şeyler ters gitti, tekrar deneyin.';
+      status.className = 'status error';
+    }
+  });
+}
+</script>
+{% endblock %}

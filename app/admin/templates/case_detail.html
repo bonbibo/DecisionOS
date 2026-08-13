@@ -1,0 +1,72 @@
+{% extends "_base.html" %}
+{% block title %}Vaka {{ case.id }} — DecisionOS{% endblock %}
+{% block content %}
+<h1>{{ case.counterparty_name or case.counterparty_contact }}
+  {% if case.escalated %}<span class="badge">eskale</span>{% endif %}</h1>
+<p>
+  Dikey: {{ case.vertical or "-" }} &middot;
+  Kanal: {{ case.channel.value }} &middot;
+  Aşama: {{ case.state.value }} &middot;
+  Hedef: {{ case.target_price or "-" }} &middot;
+  Taban: {{ case.min_acceptable_price or "-" }} &middot;
+  Tavan: {{ case.max_price or "-" }}
+</p>
+{% if case.escalation_reason %}<p><strong>Eskalasyon nedeni:</strong> {{ case.escalation_reason }}</p>{% endif %}
+
+{% if case.payment %}
+<h2>Ödeme</h2>
+<p>
+  Durum: <strong>{{ case.payment.status.value }}</strong> &middot;
+  Ön-onay: {{ case.payment.amount }} {{ case.payment.currency }} &middot;
+  Tahsil edilen: {{ case.payment.captured_amount or "-" }}
+  {% if case.payment.note %}<br><em>{{ case.payment.note }}</em>{% endif %}
+</p>
+{% if case.payment.status.value == "pre_authorized" %}
+<form class="inline" method="post" action="/admin/cases/{{ case.id }}/payment/capture">
+  <button type="submit">Manuel Tahsil Et</button>
+</form>
+<form class="inline" method="post" action="/admin/cases/{{ case.id }}/payment/cancel">
+  <button type="submit">Manuel İptal Et</button>
+</form>
+{% endif %}
+{% endif %}
+
+{% if case.escalation_context and case.escalation_context.human_answers %}
+<h2>Operatör Geçmişi</h2>
+<table>
+<tr><th>Cevap</th><th>Kim</th><th>Tarih</th></tr>
+{% for a in case.escalation_context.human_answers %}
+<tr><td>{{ a.answer }}</td><td>{{ a.answered_by or "-" }}</td><td>{{ a.answered_at }}</td></tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% if case.escalated %}
+<h2>Soruyu Yanıtla</h2>
+<p>Bu vaka eskale edildi ve bir sonraki turu bekliyor. Aşağıya talimat/cevap yazıp gönderirseniz
+  müzakere kaldığı yerden bu yanıtla devam eder.</p>
+<form method="post" action="/admin/cases/{{ case.id }}/answer">
+  <textarea name="answer" placeholder="örn. Bu telefon isteği normal, onayla ve devam et." required></textarea>
+  <button type="submit">Cevapla ve Devam Ettir</button>
+</form>
+{% endif %}
+
+<h2>Plan</h2>
+<pre>{{ case.plan or "-" }}</pre>
+
+<h2>Mesajlar</h2>
+<table>
+<tr><th>Yön</th><th>İçerik</th><th>Tarih</th></tr>
+{% for m in case.messages %}
+<tr><td>{{ m.direction.value }}</td><td>{{ m.content }}</td><td>{{ m.created_at }}</td></tr>
+{% endfor %}
+</table>
+
+<h2>Teklifler</h2>
+<table>
+<tr><th>Tur</th><th>Taraf</th><th>Fiyat</th><th>Para Birimi</th><th>Tarih</th></tr>
+{% for o in case.offers %}
+<tr><td>{{ o.round_number }}</td><td>{{ o.actor.value }}</td><td>{{ o.price }}</td><td>{{ o.currency }}</td><td>{{ o.created_at }}</td></tr>
+{% endfor %}
+</table>
+{% endblock %}

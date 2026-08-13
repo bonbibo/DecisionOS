@@ -1,0 +1,25 @@
+{% extends "_base.html" %}
+{% block title %}Vakalar — DecisionOS{% endblock %}
+{% block content %}
+<h1>Vakalar ({{ cases|length }})</h1>
+<table>
+<tr>
+  <th>Karşı Taraf</th>
+  <th>Dikey</th>
+  <th>Kanal</th>
+  <th>Aşama</th>
+  <th>Eskale</th>
+  <th>Açıldı</th>
+</tr>
+{% for case in cases %}
+<tr class="{{ 'escalated' if case.escalated else '' }}">
+  <td><a href="/admin/cases/{{ case.id }}">{{ case.counterparty_name or case.counterparty_contact }}</a></td>
+  <td>{{ case.vertical or "-" }}</td>
+  <td>{{ case.channel.value }}</td>
+  <td>{{ case.state.value }}</td>
+  <td>{{ "EVET" if case.escalated else "-" }}</td>
+  <td>{{ case.created_at }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

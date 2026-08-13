@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>DecisionOS — WhatsApp'ta devam edin</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 32rem; margin: 4rem auto; padding: 0 1rem;
+         color: #1a1a1a; line-height: 1.5; }
+  .btn { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #25D366;
+         color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Merhaba{% if counterparty_name %}, {{ counterparty_name }}{% endif %}</h1>
+<p>
+  Kiracınız adına yazıyoruz. Detayları konuşmak ve devam etmek isterseniz aşağıdaki butondan
+  WhatsApp'ta bize yazabilirsiniz — mesajı siz başlattığınız için görüşmeyi doğrudan orada
+  sürdürebiliriz.
+</p>
+<a class="btn" href="{{ whatsapp_link }}">WhatsApp'ta devam et</a>
+<p style="margin-top:2rem;font-size:0.85em;color:#666">
+  We're writing on behalf of your tenant. If you'd rather continue in English, just say so once
+  you message us on WhatsApp.
+</p>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{% extends "_base.html" %}
+{% block title %}LLM Kullanımı — DecisionOS{% endblock %}
+{% block content %}
+<h1>Vaka Başına LLM Kullanımı</h1>
+<table>
+<tr><th>Vaka</th><th>Çağrı</th><th>Girdi Token</th><th>Çıktı Token</th><th>Ort. Gecikme (ms)</th></tr>
+{% for row in per_case %}
+<tr>
+  <td><a href="/admin/cases/{{ row.case_id }}">{{ cases_by_id[row.case_id].counterparty_name if row.case_id in cases_by_id else row.case_id }}</a></td>
+  <td>{{ row.calls }}</td>
+  <td>{{ row.input_tokens }}</td>
+  <td>{{ row.output_tokens }}</td>
+  <td>{{ "%.0f"|format(row.avg_latency_ms) }}</td>
+</tr>
+{% endfor %}
+</table>
+
+<h1>Rol Başına LLM Kullanımı</h1>
+<table>
+<tr><th>Rol</th><th>Model</th><th>Çağrı</th><th>Girdi Token</th><th>Çıktı Token</th><th>Ort. Gecikme (ms)</th></tr>
+{% for row in per_role %}
+<tr>
+  <td>{{ row.role }}</td>
+  <td>{{ row.model }}</td>
+  <td>{{ row.calls }}</td>
+  <td>{{ row.input_tokens }}</td>
+  <td>{{ row.output_tokens }}</td>
+  <td>{{ "%.0f"|format(row.avg_latency_ms) }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}
